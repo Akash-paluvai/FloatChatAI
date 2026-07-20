@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌊</text></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FloatChat — Talk to the Ocean with AI</title>
+    <meta name="description" content="AI-powered conversational discovery and visualization of ARGO oceanographic data using RAG, MCP, and LLMs." />
+
+    <!-- Google Fonts: Space Grotesk & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <!-- Tailwind CSS Script for standalone development -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              ocean: {
+                dark: '#031B2E',
+                secondary: '#06283D',
+                surface: 'rgba(255, 255, 255, 0.05)',
+                surfaceHover: 'rgba(255, 255, 255, 0.08)',
+                blue: '#00B4FF',
+                cyan: '#5EE6FF',
+                accent: '#38BDF8',
+                muted: '#A8C7D8',
+                border: 'rgba(94, 230, 255, 0.15)',
+                card: 'rgba(6, 40, 61, 0.6)'
+              }
+            },
+            fontFamily: {
+              heading: ['"Space Grotesk"', 'sans-serif'],
+              sans: ['Inter', 'sans-serif'],
+              mono: ['"JetBrains Mono"', 'monospace'],
+            },
+            boxShadow: {
+              'ocean-glow': '0 0 35px -5px rgba(0, 180, 255, 0.3)',
+              'cyan-glow': '0 0 25px -5px rgba(94, 230, 255, 0.4)',
+              'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+            },
+            animation: {
+              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'float': 'float 6s ease-in-out infinite',
+              'wave': 'wave 15s linear infinite',
+              'glow-spin': 'glow-spin 8s linear infinite',
+            },
+            keyframes: {
+              float: {
+                '0%, 100%': { transform: 'translateY(0px)' },
+                '50%': { transform: 'translateY(-15px)' },
+              },
+              wave: {
+                '0%': { transform: 'translateX(0)' },
+                '100%': { transform: 'translateX(-50%)' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="/src/styles/globals.css">
+  </head>
+  <body class="bg-[#031B2E] text-white selection:bg-[#00B4FF]/30 selection:text-[#5EE6FF] overflow-x-hidden font-sans">
+    <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "Remix: FloatChat - AI Ocean Data Explorer",
+  "description": "An AI-powered conversational interface for ARGO ocean data discovery and visualization. Chat with an AI to explore, map, and visualize oceanographic data.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
