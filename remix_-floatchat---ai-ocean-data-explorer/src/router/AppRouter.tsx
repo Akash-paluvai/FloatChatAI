@@ -1,29 +1,25 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Navbar } from '../components/layout/Navbar';
-import { Footer } from '../components/layout/Footer';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { ROUTES } from '../constants/routes';
 import { LandingPage } from '../pages/LandingPage';
 import { DemoPage } from '../pages/DemoPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { DocsPage } from '../pages/DocsPage';
 import { AboutPage } from '../pages/AboutPage';
+import { StatusPage } from '../pages/StatusPage';
+import { NotFoundPage } from '../pages/NotFoundPage';
 
 export const AppRouter: React.FC = () => {
   return (
-    <BrowserRouter>
-      <div className="min-h-screen flex flex-col bg-[#031B2E] text-white selection:bg-[#00B4FF]/30 selection:text-[#5EE6FF]">
-        <Navbar />
-        <div className="flex-1">
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/demo" element={<DemoPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/docs" element={<DocsPage />} />
-            <Route path="/about" element={<AboutPage />} />
-          </Routes>
-        </div>
-        <Footer />
-      </div>
-    </BrowserRouter>
+    <Routes>
+      <Route path={ROUTES.HOME} element={<LandingPage />} />
+      <Route path={ROUTES.DEMO} element={<DemoPage />} />
+      <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
+      <Route path={ROUTES.DOCS} element={<DocsPage />} />
+      <Route path={ROUTES.ABOUT} element={<AboutPage />} />
+      <Route path={ROUTES.STATUS} element={<StatusPage />} />
+      <Route path={ROUTES.NOT_FOUND} element={<NotFoundPage />} />
+      <Route path="*" element={<Navigate to={ROUTES.NOT_FOUND} replace />} />
+    </Routes>
   );
 };

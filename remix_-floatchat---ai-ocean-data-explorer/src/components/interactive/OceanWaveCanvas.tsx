@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 
 export const OceanWaveCanvas: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -21,72 +21,56 @@ export const OceanWaveCanvas: React.FC = () => {
     };
     window.addEventListener('resize', handleResize);
 
-    // Floating Particles
-    const particles = Array.from({ length: 45 }, () => ({
+    // Floating Ocean Particles & ARGO Buoys
+    const numParticles = 40;
+    const particles = Array.from({ length: numParticles }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
       radius: Math.random() * 2 + 1,
-      vy: - (Math.random() * 0.4 + 0.1),
-      vx: (Math.random() - 0.5) * 0.2,
-      opacity: Math.random() * 0.5 + 0.2,
+      vy: -(Math.random() * 0.4 + 0.1),
+      vx: Math.sin(Math.random() * Math.PI) * 0.2,
+      alpha: Math.random() * 0.5 + 0.2,
+      isBuoy: Math.random() > 0.8,
     }));
 
     let step = 0;
 
     const render = () => {
-      step += 0.015;
+      step += 0.01;
       ctx.clearRect(0, 0, width, height);
 
-      // Deep Ocean Gradient Background
-      const bgGrad = ctx.createRadialGradient(
-        width / 2, height / 3, 50,
-        width / 2, height / 2, Math.max(width, height)
-      );
-      bgGrad.addColorStop(0, '#06283D');
-      bgGrad.addColorStop(0.6, '#031B2E');
-      bgGrad.addColorStop(1, '#020d18');
+      // Draw subtle wave gradient at bottom
+      ctx.beginPath();
+      ctx.moveTo(0, height);
+      for (let x = 0; x <= width; x += 30) {
+        const y = height - 80 + Math.sin(step + x * 0.005) * 20 + Math.cos(step * 0.8 + x * 0.003) * 15;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(width, height);
+      ctx.fillStyle = 'rgba(0, 180, 255, 0.03)';
+      ctx.fill();
 
-      ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, width, height);
-
-      // Animated Sine Waves
-      const waves = [
-        { amplitude: 30, frequency: 0.008, speed: step * 0.8, color: 'rgba(0, 180, 255, 0.08)' },
-        { amplitude: 45, frequency: 0.005, speed: step * 0.5, color: 'rgba(94, 230, 255, 0.05)' },
-        { amplitude: 20, frequency: 0.012, speed: step * 1.2, color: 'rgba(56, 189, 248, 0.07)' },
-      ];
-
-      waves.forEach(wave => {
-        ctx.beginPath();
-        ctx.moveTo(0, height);
-
-        for (let x = 0; x <= width; x += 10) {
-          const y = height * 0.6 + Math.sin(x * wave.frequency + wave.speed) * wave.amplitude;
-          ctx.lineTo(x, y);
-        }
-
-        ctx.lineTo(width, height);
-        ctx.closePath();
-        ctx.fillStyle = wave.color;
-        ctx.fill();
-      });
-
-      // Render Floating Bioluminescent Particles
-      particles.forEach(p => {
+      // Render floating ocean particles
+      particles.forEach((p) => {
         p.y += p.vy;
-        p.x += p.vx;
+        p.x += Math.sin(step + p.y * 0.01) * 0.3;
 
-        if (p.y < 0) p.y = height;
-        if (p.x < 0) p.x = width;
-        if (p.x > width) p.x = 0;
+        if (p.y < 0) {
+          p.y = height;
+          p.x = Math.random() * width;
+        }
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(94, 230, 255, ${p.opacity})`;
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = '#5EE6FF';
+        ctx.fillStyle = p.isBuoy ? `rgba(94, 230, 255, ${p.alpha * 1.5})` : `rgba(0, 180, 255, ${p.alpha})`;
         ctx.fill();
-        ctx.shadowBlur = 0;
+
+        if (p.isBuoy) {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius * 3, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(94, 230, 255, ${p.alpha * 0.4})`;
+          ctx.stroke();
+        }
       });
 
       animationFrameId = requestAnimationFrame(render);
@@ -103,7 +87,7 @@ export const OceanWaveCanvas: React.FC = () => {
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 pointer-events-none w-full h-full z-0 opacity-80"
+      className="fixed inset-0 pointer-events-none z-0 opacity-70"
     />
   );
 };
