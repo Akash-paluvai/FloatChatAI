@@ -1,6 +1,6 @@
 import React from 'react';
-import { Link } from 'react.router-dom';
-import { Waves, Github, Twitter, MessageSquare, ExternalLink, CheckCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Waves, GitBranch, MessageSquare, ExternalLink, CheckCircle } from 'lucide-react';
 import { APP_CONFIG } from '../../config/app';
 import { FOOTER_LINKS } from '../../constants/navigation';
 import { ROUTES } from '../../constants/routes';
@@ -71,7 +71,7 @@ export const Footer: React.FC = () => {
                 className="w-9 h-9 rounded-xl bg-[#06283D] border border-[#5EE6FF]/20 flex items-center justify-center text-[#A8C7D8] hover:text-white hover:border-[#00B4FF] transition-all"
                 aria-label="GitHub repository"
               >
-                <Github className="w-4 h-4" />
+                <GitBranch className="w-4 h-4" />
               </a>
               <a
                 href={APP_CONFIG.socials.twitter}
@@ -80,7 +80,7 @@ export const Footer: React.FC = () => {
                 className="w-9 h-9 rounded-xl bg-[#06283D] border border-[#5EE6FF]/20 flex items-center justify-center text-[#A8C7D8] hover:text-white hover:border-[#00B4FF] transition-all"
                 aria-label="Twitter"
               >
-                <Twitter className="w-4 h-4" />
+                <MessageSquare className="w-4 h-4" />
               </a>
               <a
                 href={APP_CONFIG.socials.discord}

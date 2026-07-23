@@ -1,62 +1,61 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Sparkles, ArrowRight, BookOpen, Waves } from 'lucide-react';
+import { Sparkles, ArrowRight, Compass } from 'lucide-react';
+import { ROUTES } from '../../constants/routes';
+import { Container } from '../ui/Container';
+import { Button } from '../ui/Button';
 
 export const CtaSection: React.FC = () => {
   return (
-    <section className="py-24 bg-[#031B2E] relative overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        
-        {/* Large Gradient Container */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="relative rounded-3xl bg-gradient-to-br from-[#06283D] via-[#031B2E] to-[#00B4FF]/20 border border-[#5EE6FF]/30 p-10 sm:p-16 text-center overflow-hidden shadow-[0_20px_70px_rgba(0,180,255,0.25)]"
-        >
-          {/* Ambient Background Water Effect */}
-          <div className="absolute -top-24 -left-24 w-96 h-96 bg-[#00B4FF]/20 blur-[140px] rounded-full pointer-events-none" />
-          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-[#5EE6FF]/20 blur-[140px] rounded-full pointer-events-none" />
+    <section className="py-24 relative overflow-hidden">
+      {/* Glow background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#00B4FF]/10 to-transparent pointer-events-none" />
 
-          {/* Icon Badge */}
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#031B2E] border border-[#5EE6FF]/40 text-[#5EE6FF] mb-6 shadow-xl">
-            <Waves className="w-8 h-8 animate-pulse" />
-          </div>
+      <Container size="lg" className="relative z-10">
+        <div className="p-10 sm:p-16 rounded-3xl bg-gradient-to-br from-[#06283D] via-[#031B2E] to-[#06283D] border border-[#00B4FF]/40 text-center flex flex-col items-center gap-6 shadow-2xl shadow-[#00B4FF]/20 relative overflow-hidden">
+          {/* Subtle grid pattern background overlay */}
+          <div className="absolute inset-0 bg-grid-pattern opacity-30 pointer-events-none" />
 
-          {/* Headline */}
-          <h2 className="font-heading font-extrabold text-4xl sm:text-5xl xl:text-6xl text-white tracking-tight mb-6 max-w-3xl mx-auto leading-tight">
-            Ready to Explore the Ocean with <span className="gradient-ocean-text">AI?</span>
-          </h2>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="relative z-10 flex flex-col items-center gap-4 max-w-2xl"
+          >
+            <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-[#00B4FF]/20 text-[#5EE6FF] border border-[#00B4FF]/40">
+              Start Exploring Today
+            </span>
 
-          <p className="text-[#A8C7D8] text-base sm:text-lg max-w-2xl mx-auto font-light mb-10 leading-relaxed">
-            Start querying 10M+ ARGO profile measurements instantly using natural language. Built for researchers, students, and ocean advocates.
-          </p>
+            <h2 className="text-3xl sm:text-5xl font-extrabold font-heading text-white tracking-tight">
+              Ready to Explore the Ocean?
+            </h2>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-wrap items-center justify-center gap-5">
-            <Link
-              to="/demo"
-              className="group inline-flex items-center gap-3 px-9 py-4 rounded-2xl bg-gradient-to-r from-[#00B4FF] to-[#38BDF8] text-[#031B2E] font-heading font-bold text-sm shadow-[0_0_35px_rgba(0,180,255,0.6)] hover:shadow-[0_0_50px_rgba(94,230,255,0.9)] transition-all duration-300 hover:-translate-y-1"
-            >
-              <Sparkles className="w-4 h-4 text-[#031B2E]" />
-              <span>Launch Demo</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </Link>
+            <p className="text-base sm:text-lg text-[#A8C7D8] font-normal leading-relaxed">
+              Experience the power of natural language query translation over ARGO oceanographic data with FloatChat.
+            </p>
 
-            <Link
-              to="/docs"
-              className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-[#031B2E]/90 border border-white/15 text-white font-heading font-semibold text-sm hover:border-[#5EE6FF]/50 hover:bg-[#06283D] backdrop-blur-md transition-all duration-300"
-            >
-              <BookOpen className="w-4 h-4 text-[#5EE6FF]" />
-              <span>View Documentation</span>
-            </Link>
-          </div>
-
-        </motion.div>
-
-      </div>
+            <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+              <Link to={ROUTES.DEMO}>
+                <Button
+                  variant="gradient"
+                  size="lg"
+                  leftIcon={<Sparkles className="w-5 h-5" />}
+                  rightIcon={<ArrowRight className="w-5 h-5" />}
+                >
+                  Launch FloatChat
+                </Button>
+              </Link>
+              <Link to={ROUTES.DOCS}>
+                <Button variant="secondary" size="lg" leftIcon={<Compass className="w-5 h-5" />}>
+                  View Documentation
+                </Button>
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </Container>
     </section>
   );
 };

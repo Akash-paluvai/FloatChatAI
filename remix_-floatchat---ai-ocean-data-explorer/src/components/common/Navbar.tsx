@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react.router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Waves, Menu, X, Sparkles, Terminal } from 'lucide-react';
 import { NAV_ITEMS } from '../../constants/navigation';
 import { ROUTES } from '../../constants/routes';

@@ -1,26 +1,23 @@
 import React from 'react';
+import { MainLayout } from '../layouts/MainLayout';
 import { HeroSection } from '../components/sections/HeroSection';
-import { TechCarouselSection } from '../components/sections/TechCarouselSection';
 import { FeaturesSection } from '../components/sections/FeaturesSection';
-import { PipelineSection } from '../components/sections/PipelineSection';
-import { DemoPreviewSection } from '../components/sections/DemoPreviewSection';
-import { VizShowcaseSection } from '../components/sections/VizShowcaseSection';
-import { StatsSection } from '../components/sections/StatsSection';
-import { ResearchImpactSection } from '../components/sections/ResearchImpactSection';
+import { HowItWorksSection } from '../components/sections/HowItWorksSection';
+import { TechStackSection } from '../components/sections/TechStackSection';
+import { ArchitectureSection } from '../components/sections/ArchitectureSection';
+import { RoadmapSection } from '../components/sections/RoadmapSection';
 import { CtaSection } from '../components/sections/CtaSection';
 
 export const LandingPage: React.FC = () => {
   return (
-    <div className="w-full">
+    <MainLayout title="Talk to the Ocean with AI">
       <HeroSection />
-      <TechCarouselSection />
       <FeaturesSection />
-      <PipelineSection />
-      <DemoPreviewSection />
-      <VizShowcaseSection />
-      <StatsSection />
-      <ResearchImpactSection />
+      <HowItWorksSection />
+      <TechStackSection />
+      <ArchitectureSection />
+      <RoadmapSection />
       <CtaSection />
-    </div>
+    </MainLayout>
   );
 };

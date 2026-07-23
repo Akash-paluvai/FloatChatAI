@@ -1,133 +1,96 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { GlassCard } from '../layout/GlassCard';
-import { MessageSquareText, Cpu, MapPin, Navigation, LineChart, FileDown, ArrowUpRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { MessageSquare, Compass, BarChart3, Radio, Cpu, Download } from 'lucide-react';
+import { Container } from '../ui/Container';
+import { SectionTitle } from '../ui/SectionTitle';
+import { Card } from '../ui/Card';
 
 export const FeaturesSection: React.FC = () => {
   const features = [
     {
-      id: 'nl-search',
-      title: 'Natural Language Ocean Search',
-      description: 'Ask complex oceanographic questions in plain English. FloatChat converts your intent into validated PostGIS SQL and pandas queries automatically.',
-      icon: MessageSquareText,
-      tag: 'LLM Query Engine',
-      color: 'blue' as const,
-      queryExample: '"Show surface temperature trends near Bay of Bengal in 2024"'
+      icon: MessageSquare,
+      title: 'Natural Language Search',
+      description: 'Ask complex oceanographic questions in plain English. No SQL or netCDF programming required.',
+      badge: 'Text-to-SQL',
     },
     {
-      id: 'rag-retrieval',
-      title: 'RAG-Powered Scientific Retrieval',
-      description: 'Retrieval-Augmented Generation indexes oceanographic metadata, temperature depth matrices, and NetCDF research papers for grounded responses.',
+      icon: Compass,
+      title: 'Ocean Data Discovery',
+      description: 'Seamlessly query global ocean basins, thermocline boundaries, and regional salinity gradients.',
+      badge: 'Global Spatial',
+    },
+    {
+      icon: BarChart3,
+      title: 'Interactive Visualizations',
+      description: 'Render instant 2D/3D depth profiles, thermocline plots, and spatial heatmaps.',
+      badge: 'Plotly Graphing',
+    },
+    {
+      icon: Radio,
+      title: 'ARGO Float Tracking',
+      description: 'Monitor real-time trajectories and telemetry status for over 3,800 active autonomous buoys.',
+      badge: 'Live Telemetry',
+    },
+    {
       icon: Cpu,
-      tag: 'ChromaDB + FAISS',
-      color: 'cyan' as const,
-      queryExample: 'Semantic similarity search across 100K+ profiles'
+      title: 'Scientific Analytics',
+      description: 'Calculate ocean heat content, density layers, and climate anomaly patterns automatically.',
+      badge: 'RAG Analytics',
     },
     {
-      id: 'interactive-maps',
-      title: 'Interactive Ocean Maps',
-      description: 'Explore live ARGO float locations, surface thermal gradients, salinity distribution, and spatial bounding boxes on interactive dark maps.',
-      icon: MapPin,
-      tag: 'PostGIS Geospatial',
-      color: 'sky' as const,
-      queryExample: 'Realtime CartoDB Dark Vector Layer Overlay'
+      icon: Download,
+      title: 'Research Export',
+      description: 'Export subsetted observations directly into CSV, Parquet, or GeoJSON for academic publication.',
+      badge: 'Data Pipeline',
     },
-    {
-      id: 'float-tracking',
-      title: 'ARGO Float Trajectory Tracking',
-      description: 'Track individual float drift paths across years, monitoring drift velocities, bathymetric depths, and active profiling status.',
-      icon: Navigation,
-      tag: 'INCOIS / GDAC Data',
-      color: 'blue' as const,
-      queryExample: 'Platform #2902745 • 142 profiles recorded'
-    },
-    {
-      id: 'scientific-viz',
-      title: 'Scientific Visualization Engine',
-      description: 'Instant dynamic generation of T-S (Temperature vs Salinity) diagrams, depth profiles (0-2000m), time-series heatmaps, and anomalies.',
-      icon: LineChart,
-      tag: 'Plotly Scientific',
-      color: 'cyan' as const,
-      queryExample: 'Depth vs Temp • Thermocline & Oxycline Rendering'
-    },
-    {
-      id: 'export-reports',
-      title: 'Scientific Export & PDF Reports',
-      description: 'Export clean NetCDF, GeoJSON, CSV, or publication-ready PDF research summaries with citation references for policymakers and papers.',
-      icon: FileDown,
-      tag: 'GeoJSON / NetCDF',
-      color: 'sky' as const,
-      queryExample: 'One-click publication export with confidence metrics'
-    }
   ];
 
   return (
-    <section id="features" className="py-24 bg-[#031B2E] relative overflow-hidden">
-      {/* Background Ambient Glow */}
-      <div className="absolute top-1/2 right-0 w-96 h-96 bg-[#00B4FF]/10 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#5EE6FF]/10 blur-[120px] rounded-full pointer-events-none" />
+    <section id="features" className="py-20 relative">
+      <Container size="lg">
+        <SectionTitle
+          badgeText="Capabilities"
+          title="Designed for Ocean Science & AI Exploration"
+          subtitle="Everything you need to interrogate millions of ARGO float records in seconds."
+        />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        
-        {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#06283D] border border-[#5EE6FF]/30 text-[#5EE6FF] text-xs font-mono">
-            <span className="w-2 h-2 rounded-full bg-[#5EE6FF] animate-pulse" />
-            Core Platform Capabilities
-          </div>
-          <h2 className="font-heading font-extrabold text-4xl sm:text-5xl text-white tracking-tight leading-tight">
-            Engineered for <span className="gradient-ocean-text">Scientific Rigor</span> & Speed
-          </h2>
-          <p className="text-[#A8C7D8] text-base font-light">
-            Designed to bridge raw ocean telemetry with conversational AI, making oceanographic data instant, visual, and actionable.
-          </p>
-        </div>
-
-        {/* 6 Glass Feature Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feat, idx) => (
-            <motion.div
-              key={feat.id}
-              initial={{ opacity: 0, y: 25 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: idx * 0.1 }}
-            >
-              <GlassCard glowColor={feat.color} className="h-full flex flex-col justify-between group">
-                <div className="space-y-4">
-                  {/* Top Row: Icon + Tag */}
-                  <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#06283D] to-[#031B2E] border border-[#5EE6FF]/30 flex items-center justify-center text-[#5EE6FF] shadow-lg group-hover:scale-110 group-hover:border-[#5EE6FF] transition-all duration-300">
-                      <feat.icon className="w-6 h-6 text-[#5EE6FF]" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-14">
+          {features.map((feat, idx) => {
+            const Icon = feat.icon;
+            return (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: idx * 0.1 }}
+              >
+                <Card variant="glass" className="h-full flex flex-col justify-between group">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                      <div className="w-12 h-12 rounded-2xl bg-[#00B4FF]/10 border border-[#00B4FF]/30 flex items-center justify-center group-hover:scale-110 group-hover:bg-[#00B4FF] transition-all">
+                        <Icon className="w-6 h-6 text-[#00B4FF] group-hover:text-[#031B2E] transition-colors" />
+                      </div>
+                      <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-[#06283D] border border-[#5EE6FF]/20 text-[#5EE6FF]">
+                        {feat.badge}
+                      </span>
                     </div>
-                    <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-[#00B4FF]/10 text-[#5EE6FF] border border-[#5EE6FF]/20">
-                      {feat.tag}
-                    </span>
+
+                    <div>
+                      <h3 className="text-xl font-bold font-heading text-white group-hover:text-[#5EE6FF] transition-colors">
+                        {feat.title}
+                      </h3>
+                      <p className="text-xs text-[#A8C7D8] font-normal leading-relaxed mt-2">
+                        {feat.description}
+                      </p>
+                    </div>
                   </div>
-
-                  {/* Title & Description */}
-                  <h3 className="font-heading font-bold text-xl text-white group-hover:text-[#5EE6FF] transition-colors">
-                    {feat.title}
-                  </h3>
-                  <p className="text-xs text-[#A8C7D8] leading-relaxed font-light">
-                    {feat.description}
-                  </p>
-                </div>
-
-                {/* Example Snippet / Action Footnote */}
-                <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-[#5EE6FF]">
-                  <span className="truncate pr-2">{feat.queryExample}</span>
-                  <Link to="/demo" className="text-white hover:text-[#5EE6FF] flex items-center gap-0.5 shrink-0">
-                    <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                  </Link>
-                </div>
-              </GlassCard>
-            </motion.div>
-          ))}
+                </Card>
+              </motion.div>
+            );
+          })}
         </div>
-
-      </div>
+      </Container>
     </section>
   );
 };

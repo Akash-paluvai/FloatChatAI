@@ -1,97 +1,101 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { OceanWaveCanvas } from '../interactive/OceanWaveCanvas';
-import { InteractiveNeuralDiagram } from '../interactive/InteractiveNeuralDiagram';
-import { useMouseParallax } from '../../hooks/useMouseParallax';
-import { Sparkles, ArrowRight, ShieldCheck, Database, Compass, Terminal } from 'lucide-react';
+import { Sparkles, ArrowRight, Compass, ShieldCheck, Database, Radio } from 'lucide-react';
+import { ROUTES } from '../../constants/routes';
+import { Button } from '../ui/Button';
+import { Badge } from '../ui/Badge';
+import { Container } from '../ui/Container';
+import { SearchBar } from '../ui/SearchBar';
+import { HeroIllustration } from '../interactive/HeroIllustration';
 
 export const HeroSection: React.FC = () => {
-  const parallax = useMouseParallax(12);
-
   return (
-    <section className="relative min-h-screen flex items-center justify-center pt-28 pb-20 overflow-hidden bg-radial-ocean">
-      {/* Ocean Canvas Layer */}
-      <OceanWaveCanvas />
+    <section className="relative min-h-[90vh] flex items-center justify-center pt-8 pb-16 overflow-hidden">
+      {/* Ambient background glowing circles */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-radial-ocean pointer-events-none opacity-60 blur-3xl" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          
-          {/* Left Column: Headline & Content */}
+      <Container size="xl" className="relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+          {/* Left Column: Headline & Controls */}
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: 'easeOut' }}
-            style={{ transform: `translate3d(${parallax.x}px, ${parallax.y}px, 0)` }}
-            className="lg:col-span-7 space-y-6 text-left"
+            transition={{ duration: 0.8 }}
+            className="lg:col-span-7 flex flex-col gap-6 text-left"
           >
-            {/* Top Pill Badge */}
-            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-[#06283D]/80 border border-[#5EE6FF]/30 backdrop-blur-md shadow-[0_0_20px_rgba(0,180,255,0.2)]">
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#5EE6FF] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00B4FF]"></span>
-              </span>
-              <span className="text-xs font-mono text-[#5EE6FF] tracking-wide">
-                Next-Gen ARGO Ocean Intelligence System
-              </span>
+            <div className="flex items-center gap-3">
+              <Badge variant="highlight" glowing icon={<Radio className="w-3.5 h-3.5" />}>
+                ARGO Ocean Data Explorer
+              </Badge>
+              <Badge variant="phase2">Phase 1 Live</Badge>
             </div>
 
-            {/* Main Headline */}
-            <h1 className="font-heading font-extrabold text-5xl sm:text-6xl xl:text-7xl tracking-tight text-white leading-[1.08]">
+            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold font-heading tracking-tight text-white leading-[1.1]">
               Talk to the <br />
-              <span className="gradient-ocean-text">Ocean.</span>
+              <span className="gradient-hero-heading">Ocean.</span>
             </h1>
 
-            {/* Subheading */}
-            <p className="text-base sm:text-lg text-[#A8C7D8] leading-relaxed max-w-2xl font-sans font-light">
-              AI-powered conversational discovery and visualization of global ARGO oceanographic data using <span className="text-white font-medium">Retrieval-Augmented Generation (RAG)</span>, <span className="text-[#5EE6FF] font-mono">Model Context Protocol (MCP)</span>, and PostGIS spatial queries.
+            <p className="text-lg sm:text-xl text-[#A8C7D8] font-normal leading-relaxed max-w-2xl">
+              Explore oceanographic data through natural language conversations powered by AI. Query temperature profiles, salinity anomalies, and 3,800+ ARGO floats effortlessly.
             </p>
 
-            {/* Action Buttons */}
-            <div className="pt-2 flex flex-wrap items-center gap-4">
-              <Link
-                to="/demo"
-                className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-[#00B4FF] to-[#38BDF8] text-[#031B2E] font-heading font-bold text-sm shadow-[0_0_30px_rgba(0,180,255,0.5)] hover:shadow-[0_0_45px_rgba(94,230,255,0.8)] transition-all duration-300 hover:-translate-y-1"
-              >
-                <Sparkles className="w-4 h-4 text-[#031B2E]" />
-                <span>Try Live Demo</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-
-              <Link
-                to="/docs"
-                className="inline-flex items-center gap-2.5 px-7 py-4 rounded-2xl bg-[#06283D]/60 border border-white/10 text-white font-heading font-semibold text-sm hover:border-[#5EE6FF]/40 hover:bg-[#06283D] backdrop-blur-md transition-all duration-300"
-              >
-                <Terminal className="w-4 h-4 text-[#5EE6FF]" />
-                <span>Explore Architecture</span>
-              </Link>
+            {/* Natural Language Quick Search Bar Trigger */}
+            <div className="pt-2">
+              <SearchBar placeholder="Ask FloatChat: 'Show temperature near Bay of Bengal'..." />
             </div>
 
-            {/* Trust Metrics Pill */}
-            <div className="pt-6 border-t border-white/10 flex flex-wrap items-center gap-6 text-xs text-[#A8C7D8]">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-[#22C55E]" />
-                <span>Safe PostGIS SQL Translation</span>
+            {/* CTA Action Buttons */}
+            <div className="flex flex-wrap items-center gap-4 pt-2">
+              <Link to={ROUTES.DEMO}>
+                <Button
+                  variant="gradient"
+                  size="lg"
+                  leftIcon={<Sparkles className="w-5 h-5" />}
+                  rightIcon={<ArrowRight className="w-5 h-5" />}
+                >
+                  Explore Demo
+                </Button>
+              </Link>
+              <a href="#how-it-works">
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  leftIcon={<Compass className="w-5 h-5" />}
+                >
+                  Learn More
+                </Button>
+              </a>
+            </div>
+
+            {/* Micro Stats */}
+            <div className="grid grid-cols-3 gap-6 pt-6 border-t border-[#5EE6FF]/15 max-w-xl">
+              <div>
+                <span className="text-2xl font-bold font-heading text-white">3,840+</span>
+                <p className="text-xs text-[#A8C7D8]">ARGO Floats</p>
               </div>
-              <div className="flex items-center gap-2">
-                <Database className="w-4 h-4 text-[#00B4FF]" />
-                <span>10M+ ARGO Profiling Data Points</span>
+              <div>
+                <span className="text-2xl font-bold font-heading text-[#5EE6FF]">2.4M+</span>
+                <p className="text-xs text-[#A8C7D8]">Parsed Profiles</p>
+              </div>
+              <div>
+                <span className="text-2xl font-bold font-heading text-[#00B4FF]">Open</span>
+                <p className="text-xs text-[#A8C7D8]">Research Standard</p>
               </div>
             </div>
           </motion.div>
 
-          {/* Right Column: Interactive Neural & Ocean Illustration */}
+          {/* Right Column: Hero Illustration */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.9, delay: 0.2 }}
-            className="lg:col-span-5 relative"
+            transition={{ duration: 1, delay: 0.2 }}
+            className="lg:col-span-5 flex justify-center"
           >
-            <InteractiveNeuralDiagram />
+            <HeroIllustration />
           </motion.div>
-
         </div>
-      </div>
+      </Container>
     </section>
   );
 };
