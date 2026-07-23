@@ -1,198 +1,311 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MOCK_ARGO_FLOATS } from '../utils/mockOceanData';
-import { LeafletOceanMap } from '../components/interactive/LeafletOceanMap';
-import { 
-  SlidersHorizontal, MapPin, Activity, Navigation, Filter, 
-  Layers, RefreshCw, BarChart2, Calendar, Database, Eye
-} from 'lucide-react';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend, AreaChart, Area } from 'recharts';
+import { Radio, Database, Thermometer, Droplets, Globe, Filter, Search, Download, Clock, Play, FileSpreadsheet, Layers, RefreshCw, ChevronRight } from 'lucide-react';
+import { DashboardLayout } from '../layouts/DashboardLayout';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Dropdown } from '../components/ui/Dropdown';
+import { DashboardService } from '../services/dashboard.service';
+import { DashboardMetric, RecentQueryItem, DatasetItem } from '../types/dashboard';
+import { ArgoFloat, OceanRegionData } from '../types/ocean';
 
 export const DashboardPage: React.FC = () => {
-  const [selectedRegion, setSelectedRegion] = useState<string>('All');
-  const [depthFilter, setDepthFilter] = useState<number>(500);
-  const [selectedVariable, setSelectedVariable] = useState<'temperature' | 'salinity' | 'oxygen'>('temperature');
+  const [activeTab, setActiveTab] = useState<'overview' | 'floats' | 'datasets' | 'queries'>('overview');
+  const [metrics, setMetrics] = useState<DashboardMetric[]>([]);
+  const [recentQueries, setRecentQueries] = useState<RecentQueryItem[]>([]);
+  const [datasets, setDatasets] = useState<DatasetItem[]>([]);
+  const [regions, setRegions] = useState<OceanRegionData[]>([]);
+  const [floats, setFloats] = useState<ArgoFloat[]>([]);
+  const [selectedRegion, setSelectedRegion] = useState('all');
 
-  const filteredFloats = MOCK_ARGO_FLOATS.filter(f => selectedRegion === 'All' || f.region === selectedRegion);
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      const mRes = await DashboardService.getMetrics();
+      const qRes = await DashboardService.getRecentQueries();
+      const dRes = await DashboardService.getDatasets();
+      const rRes = await DashboardService.getOceanRegions();
+      const fRes = await DashboardService.getActiveFloats();
 
-  const mapPoints = filteredFloats.map(f => ({
-    id: f.id,
-    lat: f.latitude,
-    lon: f.longitude,
-    temp: f.profiles[0].measurements[0].temperature,
-    salinity: f.profiles[0].measurements[0].salinity,
-    floatId: f.platformNumber
-  }));
+      setMetrics(mRes.data);
+      setRecentQueries(qRes.data);
+      setDatasets(dRes.data);
+      setRegions(rRes.data);
+      setFloats(fRes.data);
+    };
+    fetchDashboardData();
+  }, []);
 
-  const chartData = filteredFloats[0].profiles[0].measurements.filter(m => m.depth <= depthFilter).map(m => ({
-    depth: m.depth,
-    temperature: m.temperature,
-    salinity: m.salinity,
-    oxygen: m.oxygen
-  }));
+  const getMetricIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'Radio': return <Radio className="w-5 h-5 text-[#00B4FF]" />;
+      case 'Database': return <Database className="w-5 h-5 text-[#5EE6FF]" />;
+      case 'Thermometer': return <Thermometer className="w-5 h-5 text-amber-400" />;
+      case 'Droplet': default: return <Droplets className="w-5 h-5 text-[#38BDF8]" />;
+    }
+  };
 
   return (
-    <div className="min-h-screen pt-24 pb-16 bg-[#031B2E] text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        
-        {/* Top Dashboard Title & Controls */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-6">
+    <DashboardLayout title="ARGO Ocean Analytics Dashboard">
+      <div className="flex flex-col gap-6">
+        {/* Top Header Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#5EE6FF]/15">
           <div>
-            <div className="flex items-center gap-2 text-xs font-mono text-[#5EE6FF] mb-1">
-              <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
-              Live PostGIS Ocean Analytics Feed
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl font-bold font-heading text-white">ARGO Global Ocean Analytics</h1>
+              <Badge variant="accent" glowing>Phase 1 Dashboard UI</Badge>
             </div>
-            <h1 className="font-heading font-extrabold text-3xl sm:text-4xl text-white tracking-tight">
-              Oceanographic <span className="gradient-ocean-text">Analytics Dashboard</span>
-            </h1>
+            <p className="text-xs text-[#A8C7D8] mt-1 font-mono">
+              Monitoring 3,842 active autonomous profilers across global ocean basins.
+            </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => { setSelectedRegion('All'); setDepthFilter(2000); }}
-              className="px-4 py-2 rounded-xl bg-[#06283D] border border-white/10 text-xs font-mono text-[#A8C7D8] hover:text-white hover:border-[#5EE6FF] transition-all flex items-center gap-2"
-            >
-              <RefreshCw className="w-3.5 h-3.5" /> Reset Filters
-            </button>
-            <div className="px-4 py-2 rounded-xl bg-[#00B4FF]/20 border border-[#5EE6FF]/40 text-xs font-mono text-[#5EE6FF] flex items-center gap-2">
-              <Database className="w-3.5 h-3.5" /> {filteredFloats.length} Active Floats Selected
-            </div>
+          <div className="flex items-center gap-3">
+            <Dropdown
+              value={selectedRegion}
+              onChange={(val) => setSelectedRegion(val)}
+              options={[
+                { label: 'All Global Basins', value: 'all' },
+                { label: 'Bay of Bengal', value: 'bob' },
+                { label: 'Arabian Sea', value: 'as' },
+                { label: 'Southern Ocean', value: 'io' },
+              ]}
+            />
+            <Button variant="gradient" size="sm" leftIcon={<Download className="w-3.5 h-3.5" />}>
+              Export GeoJSON
+            </Button>
           </div>
         </div>
 
-        {/* Dashboard Main Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Left Controls Sidebar */}
-          <aside className="lg:col-span-4 space-y-6">
-            <div className="glass-panel p-6 rounded-3xl border border-white/10 space-y-6">
-              
-              <div className="flex items-center gap-2 text-xs font-heading font-bold text-white uppercase tracking-wider border-b border-white/10 pb-3">
-                <SlidersHorizontal className="w-4 h-4 text-[#5EE6FF]" />
-                Interactive Parameters & Filters
-              </div>
-
-              {/* Region Selector */}
-              <div className="space-y-2">
-                <label className="text-xs font-mono text-[#A8C7D8] block">Ocean Region Target</label>
-                <select
-                  value={selectedRegion}
-                  onChange={(e) => setSelectedRegion(e.target.value)}
-                  className="w-full p-3 rounded-xl bg-[#06283D] border border-white/15 text-white text-xs focus:border-[#5EE6FF] outline-none"
-                >
-                  <option value="All">Global / All Regions</option>
-                  <option value="Bay of Bengal">Bay of Bengal</option>
-                  <option value="Arabian Sea">Arabian Sea</option>
-                  <option value="Indian Ocean">Indian Ocean</option>
-                </select>
-              </div>
-
-              {/* Max Depth Range Slider */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="text-[#A8C7D8]">Max Depth Scan Limit:</span>
-                  <span className="text-[#5EE6FF] font-bold">{depthFilter} meters</span>
+        {/* Top Metric Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {metrics.map((metric) => (
+            <Card key={metric.id} variant="glass" className="p-4 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono font-medium text-[#A8C7D8]">{metric.label}</span>
+                <div className="w-8 h-8 rounded-lg bg-[#031B2E] border border-[#5EE6FF]/20 flex items-center justify-center">
+                  {getMetricIcon(metric.iconName)}
                 </div>
-                <input
-                  type="range"
-                  min="50"
-                  max="2000"
-                  step="50"
-                  value={depthFilter}
-                  onChange={(e) => setDepthFilter(Number(e.target.value))}
-                  className="w-full accent-[#00B4FF] cursor-pointer"
-                />
               </div>
 
-              {/* Primary Variable Toggle */}
-              <div className="space-y-2">
-                <label className="text-xs font-mono text-[#A8C7D8] block">Primary Parameter</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['temperature', 'salinity', 'oxygen'] as const).map((v) => (
-                    <button
-                      key={v}
-                      onClick={() => setSelectedVariable(v)}
-                      className={`py-2 rounded-lg text-[11px] font-mono capitalize transition-all ${
-                        selectedVariable === v
-                          ? 'bg-[#00B4FF] text-[#031B2E] font-bold shadow-md'
-                          : 'bg-white/5 text-[#A8C7D8] hover:text-white'
-                      }`}
-                    >
-                      {v}
-                    </button>
+              <div className="mt-3">
+                <span className="text-2xl font-bold font-heading text-white">{metric.value}</span>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs font-mono font-bold text-emerald-400">{metric.change}</span>
+                  <span className="text-[10px] text-[#A8C7D8] truncate">{metric.description}</span>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {/* Dashboard Main Content Area (Sidebar + Panel Views) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Sub-Sidebar Tabs */}
+          <div className="lg:col-span-3 flex flex-col gap-2 p-3 rounded-2xl bg-[#06283D]/60 border border-[#5EE6FF]/15 backdrop-blur-xl">
+            <span className="text-[10px] font-mono font-bold text-[#A8C7D8] uppercase px-3 py-1">Dashboard Navigation</span>
+            {[
+              { id: 'overview', label: 'Global Overview', icon: Globe },
+              { id: 'floats', label: 'Active ARGO Floats', icon: Radio },
+              { id: 'datasets', label: 'Dataset Repository', icon: Database },
+              { id: 'queries', label: 'Query Execution Log', icon: Clock },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                    isActive
+                      ? 'bg-[#00B4FF] text-[#031B2E] font-bold shadow-md shadow-[#00B4FF]/30'
+                      : 'text-[#A8C7D8] hover:text-white hover:bg-[#5EE6FF]/10'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon className="w-4 h-4" />
+                    <span>{tab.label}</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                </button>
+              );
+            })}
+
+            <div className="mt-6 pt-4 border-t border-[#5EE6FF]/10 px-3">
+              <span className="text-[10px] font-mono text-[#A8C7D8]">Phase 2 Live Telemetry Status:</span>
+              <div className="mt-1 flex items-center gap-2 text-xs text-emerald-400 font-mono">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span>Parquet Cache Active</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Main Dashboard Panel */}
+          <div className="lg:col-span-9 flex flex-col gap-6">
+            {activeTab === 'overview' && (
+              <div className="flex flex-col gap-6">
+                {/* Ocean Map Panel Placeholder */}
+                <Card variant="solid" className="p-6 bg-[#06283D]/80 border-[#5EE6FF]/20 relative overflow-hidden min-h-[340px] flex flex-col justify-between">
+                  <div className="flex items-center justify-between border-b border-[#5EE6FF]/15 pb-3">
+                    <div className="flex items-center gap-2">
+                      <Globe className="w-5 h-5 text-[#00B4FF]" />
+                      <h3 className="text-base font-bold font-heading text-white">Global ARGO Spatial Distribution Map</h3>
+                    </div>
+                    <Badge variant="accent" size="sm">Leaflet Preview</Badge>
+                  </div>
+
+                  {/* Visual Map Representation */}
+                  <div className="my-6 relative w-full h-56 rounded-2xl bg-[#031B2E] border border-[#5EE6FF]/20 overflow-hidden flex items-center justify-center">
+                    <div className="absolute inset-0 bg-grid-pattern opacity-40" />
+                    <div className="absolute inset-0 bg-radial-ocean opacity-50" />
+
+                    {/* Simulated Floating Markers */}
+                    {floats.map((fl, i) => (
+                      <motion.div
+                        key={fl.id}
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 3 + i, repeat: Infinity }}
+                        style={{ left: `${20 + i * 18}%`, top: `${30 + (i % 3) * 20}%` }}
+                        className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group cursor-pointer"
+                      >
+                        <div className="w-4 h-4 rounded-full bg-[#00B4FF] border-2 border-white shadow-[0_0_12px_#00B4FF] flex items-center justify-center">
+                          <div className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                        </div>
+                        <div className="hidden group-hover:flex flex-col p-2 rounded-lg bg-[#06283D] border border-[#5EE6FF]/30 text-[10px] font-mono text-white shadow-xl z-20 whitespace-nowrap mt-1">
+                          <span className="font-bold">WMO #{fl.wmoId}</span>
+                          <span>{fl.temperature}°C • {fl.salinity} PSU</span>
+                        </div>
+                      </motion.div>
+                    ))}
+
+                    <span className="relative z-10 text-xs font-mono text-[#A8C7D8] bg-[#031B2E]/80 px-4 py-2 rounded-xl border border-[#5EE6FF]/20">
+                      Interactive Leaflet Map — Real-time Buoy Positions
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs font-mono text-[#A8C7D8]">
+                    <span>Latitude Bounds: -60°S to +60°N</span>
+                    <span>Longitude Bounds: -180°W to +180°E</span>
+                  </div>
+                </Card>
+
+                {/* Ocean Region Metrics Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {regions.map((reg) => (
+                    <Card key={reg.id} variant="glass" className="p-4 flex flex-col justify-between">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-white font-heading">{reg.name}</span>
+                        <Badge variant="highlight" size="sm">{reg.floatCount} Floats</Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-[#5EE6FF]/10 text-xs font-mono">
+                        <div>
+                          <span className="text-[#A8C7D8] block text-[10px]">Avg Temperature</span>
+                          <span className="text-white font-bold">{reg.avgTemp} °C</span>
+                        </div>
+                        <div>
+                          <span className="text-[#A8C7D8] block text-[10px]">Avg Salinity</span>
+                          <span className="text-[#5EE6FF] font-bold">{reg.avgSalinity} PSU</span>
+                        </div>
+                      </div>
+                    </Card>
                   ))}
                 </div>
               </div>
+            )}
 
-              {/* Telemetry Summary Stats */}
-              <div className="pt-4 border-t border-white/10 space-y-3 text-xs">
-                <span className="text-white font-heading font-semibold block">Float Inventory Summary</span>
-                <div className="grid grid-cols-2 gap-3 font-mono">
-                  <div className="p-3 rounded-xl bg-[#06283D] border border-white/5">
-                    <span className="text-[10px] text-[#A8C7D8]">Avg Surface Temp</span>
-                    <span className="block font-bold text-sm text-[#5EE6FF]">29.1°C</span>
-                  </div>
-                  <div className="p-3 rounded-xl bg-[#06283D] border border-white/5">
-                    <span className="text-[10px] text-[#A8C7D8]">Avg Salinity</span>
-                    <span className="block font-bold text-sm text-[#38BDF8]">34.6 PSU</span>
-                  </div>
+            {activeTab === 'floats' && (
+              <Card variant="solid" className="p-6 bg-[#06283D]/80 border-[#5EE6FF]/20 flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold font-heading text-white">Active ARGO Floats Telemetry</h3>
+                  <Badge variant="success">3,842 Operational</Badge>
                 </div>
-              </div>
-
-            </div>
-          </aside>
-
-          {/* Right Main Dashboard Panel */}
-          <main className="lg:col-span-8 space-y-6">
-            
-            {/* Map Section */}
-            <div className="space-y-3">
-              <LeafletOceanMap
-                points={mapPoints}
-                center={[12.0, 78.0]}
-                zoom={4}
-                height="360px"
-                title={`Geospatial ARGO Float Trajectories (${selectedRegion})`}
-              />
-            </div>
-
-            {/* Depth Profile Chart */}
-            <div className="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-heading font-bold text-base text-white">
-                    Vertical Profile Curve ({selectedVariable.toUpperCase()})
-                  </h3>
-                  <span className="text-xs font-mono text-[#A8C7D8]">Depth (0–{depthFilter}m) vs {selectedVariable}</span>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead>
+                      <tr className="border-b border-[#5EE6FF]/20 text-[#A8C7D8]">
+                        <th className="py-2.5 px-3">WMO ID</th>
+                        <th className="py-2.5 px-3">Region</th>
+                        <th className="py-2.5 px-3">Lat / Lon</th>
+                        <th className="py-2.5 px-3">Temp (°C)</th>
+                        <th className="py-2.5 px-3">Salinity (PSU)</th>
+                        <th className="py-2.5 px-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {floats.map((fl) => (
+                        <tr key={fl.id} className="border-b border-[#5EE6FF]/10 hover:bg-[#5EE6FF]/5">
+                          <td className="py-2.5 px-3 font-bold text-white">#{fl.wmoId}</td>
+                          <td className="py-2.5 px-3 text-[#A8C7D8]">{fl.oceanRegion}</td>
+                          <td className="py-2.5 px-3 text-[#5EE6FF]">{fl.latitude}°, {fl.longitude}°</td>
+                          <td className="py-2.5 px-3 text-white">{fl.temperature} °C</td>
+                          <td className="py-2.5 px-3 text-[#A8C7D8]">{fl.salinity} PSU</td>
+                          <td className="py-2.5 px-3">
+                            <Badge variant={fl.status === 'active' ? 'success' : 'outline'} size="sm">
+                              {fl.status}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <span className="text-xs font-mono text-[#5EE6FF] px-2.5 py-1 rounded bg-[#5EE6FF]/10 border border-[#5EE6FF]/30">
-                  ARGO #2902745
-                </span>
-              </div>
+              </Card>
+            )}
 
-              <div className="h-64 w-full pt-2">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="colorVar" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#5EE6FF" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#00B4FF" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-                    <XAxis dataKey="depth" stroke="#A8C7D8" fontSize={10} label={{ value: 'Depth (meters)', position: 'insideBottom', offset: -5, fill: '#A8C7D8', fontSize: 10 }} />
-                    <YAxis stroke="#A8C7D8" fontSize={10} domain={['auto', 'auto']} />
-                    <Tooltip contentStyle={{ background: '#031B2E', border: '1px solid #5EE6FF', borderRadius: '8px', color: '#fff', fontSize: '12px' }} />
-                    <Area type="monotone" dataKey={selectedVariable} stroke="#5EE6FF" strokeWidth={2} fillOpacity={1} fill="url(#colorVar)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+            {activeTab === 'datasets' && (
+              <Card variant="solid" className="p-6 bg-[#06283D]/80 border-[#5EE6FF]/20 flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold font-heading text-white">Subsetted Parquet & netCDF Datasets</h3>
+                  <Badge variant="accent">Open Science</Badge>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {datasets.map((ds) => (
+                    <div key={ds.id} className="p-4 rounded-xl bg-[#031B2E] border border-[#5EE6FF]/15 flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-[#00B4FF]/10 border border-[#00B4FF]/30 flex items-center justify-center">
+                          <FileSpreadsheet className="w-5 h-5 text-[#00B4FF]" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-white">{ds.name}</h4>
+                          <span className="text-xs text-[#A8C7D8] font-mono">{ds.records} Records • {ds.fileSize} • Format: {ds.format}</span>
+                        </div>
+                      </div>
+                      <Button variant="secondary" size="sm" leftIcon={<Download className="w-3.5 h-3.5" />}>
+                        Download
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
 
-          </main>
-
+            {activeTab === 'queries' && (
+              <Card variant="solid" className="p-6 bg-[#06283D]/80 border-[#5EE6FF]/20 flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold font-heading text-white">Recent Query Execution Log</h3>
+                  <Badge variant="highlight">Text-to-SQL Audit</Badge>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {recentQueries.map((q) => (
+                    <div key={q.id} className="p-4 rounded-xl bg-[#031B2E] border border-[#5EE6FF]/15 flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-mono font-bold text-white">"{q.query}"</span>
+                        <Badge variant="success" size="sm">{q.executionTime}</Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-[10px] font-mono text-[#A8C7D8]">
+                        <span>Executed {q.timestamp}</span>
+                        <span>Region: {q.region}</span>
+                        <span>{q.recordsCount} Rows Evaluated</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
