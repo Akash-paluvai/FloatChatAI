@@ -10,7 +10,8 @@ async def test_chat_endpoint(async_client: AsyncClient):
     assert response.status_code == 200
     json_data = response.json()
     assert json_data["success"] is True
-    assert json_data["data"]["status"] == "Phase 3 AI Integration Pending"
+    assert json_data["data"]["status"] == "PROCESSED_BY_AI_ORCHESTRATOR"
+    assert "citations" in json_data["data"]
 
 
 @pytest.mark.asyncio
