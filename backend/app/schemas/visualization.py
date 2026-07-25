@@ -4,9 +4,9 @@ from pydantic import BaseModel, Field
 
 
 class VisualizationRequest(BaseModel):
-    title: str = Field(default="Temperature Profile vs Depth", example="Bay of Bengal Depth Profile")
-    viz_type: str = Field(default="temperature_profile", example="temperature_profile")
-    ocean_region: str = Field(default="Bay of Bengal", example="Bay of Bengal")
+    title: str = Field(default="Temperature Profile vs Depth", json_schema_extra={"example": "Bay of Bengal Depth Profile"})
+    viz_type: str = Field(default="temperature_profile", json_schema_extra={"example": "temperature_profile"})
+    ocean_region: str = Field(default="Bay of Bengal", json_schema_extra={"example": "Bay of Bengal"})
     wmo_id: Optional[int] = Field(default=2901234)
 
 

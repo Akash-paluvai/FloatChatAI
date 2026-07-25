@@ -6,10 +6,10 @@ from pydantic import BaseModel, Field
 class ChatRequest(BaseModel):
     message: str = Field(
         ...,
-        example="Show temperature near Bay of Bengal",
+        json_schema_extra={"example": "Show temperature near Bay of Bengal"},
         description="Natural language query prompt"
     )
-    ocean_region: Optional[str] = Field(default=None, example="Bay of Bengal")
+    ocean_region: Optional[str] = Field(default=None, json_schema_extra={"example": "Bay of Bengal"})
     max_depth_m: Optional[float] = Field(default=2000.0)
 
 
@@ -33,6 +33,6 @@ class ChatResponse(BaseModel):
         default_factory=lambda: [
             "Compare profile with 2022 historic baseline",
             "Download GeoJSON dataset for these floats",
-            "Analyze thermocline gradient between 100m–300m"
+            "Analyze thermocline gradient depth between 100m–300m"
         ]
     )

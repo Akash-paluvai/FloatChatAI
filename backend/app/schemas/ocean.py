@@ -4,14 +4,14 @@ from pydantic import BaseModel, Field
 
 
 class FloatMetadata(BaseModel):
-    wmo_id: int = Field(..., example=2901234)
-    latitude: float = Field(..., example=15.5)
-    longitude: float = Field(..., example=88.2)
-    depth_m: float = Field(..., example=10.0)
-    temperature_c: float = Field(..., example=28.4)
-    salinity_psu: float = Field(..., example=33.2)
-    status: str = Field(default="active", example="active")
-    ocean_region: str = Field(..., example="Bay of Bengal")
+    wmo_id: int = Field(..., json_schema_extra={"example": 2901234})
+    latitude: float = Field(..., json_schema_extra={"example": 15.5})
+    longitude: float = Field(..., json_schema_extra={"example": 88.2})
+    depth_m: float = Field(..., json_schema_extra={"example": 10.0})
+    temperature_c: float = Field(..., json_schema_extra={"example": 28.4})
+    salinity_psu: float = Field(..., json_schema_extra={"example": 33.2})
+    status: str = Field(default="active", json_schema_extra={"example": "active"})
+    ocean_region: str = Field(..., json_schema_extra={"example": "Bay of Bengal"})
 
 
 class ProfilePoint(BaseModel):
@@ -28,7 +28,7 @@ class ProfileMetadata(BaseModel):
 
 
 class OceanQueryRequest(BaseModel):
-    query_text: Optional[str] = Field(default=None, example="Thermocline gradient in Indian Ocean")
+    query_text: Optional[str] = Field(default=None, json_schema_extra={"example": "Thermocline gradient in Indian Ocean"})
     ocean_region: Optional[str] = Field(default="Bay of Bengal")
     min_depth: float = Field(default=0.0)
     max_depth: float = Field(default=2000.0)

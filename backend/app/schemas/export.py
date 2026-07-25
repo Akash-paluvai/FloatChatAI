@@ -4,8 +4,8 @@ from pydantic import BaseModel, Field
 
 
 class ExportRequest(BaseModel):
-    ocean_region: str = Field(default="Bay of Bengal", example="Bay of Bengal")
-    export_format: str = Field(default="CSV", example="CSV")  # CSV, Parquet, GeoJSON
+    ocean_region: str = Field(default="Bay of Bengal", json_schema_extra={"example": "Bay of Bengal"})
+    export_format: str = Field(default="CSV", json_schema_extra={"example": "CSV"})  # CSV, Parquet, GeoJSON
     include_salinity: bool = Field(default=True)
 
 

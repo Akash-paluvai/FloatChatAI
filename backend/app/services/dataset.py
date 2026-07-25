@@ -7,7 +7,7 @@ class DatasetService:
     def __init__(self):
         self.repo = DatasetRepository()
 
-    async def list_datasets() -> DatasetListResponse:
+    async def list_datasets(self) -> DatasetListResponse:
         repo = DatasetRepository()
         raw_datasets = await repo.list_all()
         ds_infos = [
