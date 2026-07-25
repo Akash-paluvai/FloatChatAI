@@ -42,7 +42,7 @@ class DatasetRepository(BaseRepository[Dataset]):
             status=m.status
         )
 
-    async def list_all(self) -> List[Dataset]:
+    async def list_all(self, limit: int = 100, offset: int = 0) -> List[Dataset]:
         if not self.session:
             return [
                 Dataset(id="ds-101", name="ARGO Bay of Bengal 2024 Filtered", source="ARGO GDAC", year=2024, record_count=482000, file_size_bytes=3328599654, format="Parquet", status="Ready"),
@@ -51,12 +51,12 @@ class DatasetRepository(BaseRepository[Dataset]):
                 Dataset(id="ds-104", name="Argovis Global Hydrographic Profiles", source="Argovis API", year=2024, record_count=2100000, file_size_bytes=14200000000, format="Parquet", status="Ready"),
             ]
 
-        stmt = select(DatasetModel)
+        stmt = select(DatasetModel).offset(offset).limit(limit)
         res = await self.session.execute(stmt)
         models = res.scalars().all()
 
         if not models:
-            return await self.list_all()  # Fallback to defaults if DB unseeded
+            return await self.list_all(limit, offset)  # Fallback to defaults if DB unseeded
 
         return [
             Dataset(
@@ -71,3 +71,19 @@ class DatasetRepository(BaseRepository[Dataset]):
             )
             for m in models
         ]
+
+    async def create(self, entity: Dataset) -> Dataset:
+        if self.session:
+            model = DatasetModel(
+                id=entity.id,
+                name=entity.name,
+                source=entity.source,
+                year=entity.year,
+                record_count=entity.record_count,
+                file_size_bytes=entity.file_size_bytes,
+                format=entity.format,
+                status=entity.status
+            )
+            self.session.add(model)
+            await self.session.commit()
+        return entity
