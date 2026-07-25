@@ -21,6 +21,7 @@ from app.api.analytics.router import router as analytics_router
 from app.api.datasets.router import router as datasets_router
 from app.api.visualization.router import router as visualization_router
 from app.api.exports.router import router as exports_router
+from app.api.retrieval.router import router as retrieval_router
 
 
 @asynccontextmanager
@@ -51,6 +52,10 @@ tags_metadata = [
     {
         "name": "Ocean Datasets",
         "description": "Open science dataset repository (ARGO, ERDDAP, Argovis, INCOIS).",
+    },
+    {
+        "name": "Semantic Retrieval Platform",
+        "description": "Hybrid BM25 + vector similarity retrieval, metadata filtering, and context assembly.",
     },
     {
         "name": "3D & Profile Visualizations",
@@ -96,6 +101,7 @@ app.include_router(system_router, prefix=API_V1_PREFIX)
 app.include_router(chat_router, prefix=API_V1_PREFIX)
 app.include_router(analytics_router, prefix=API_V1_PREFIX)
 app.include_router(datasets_router, prefix=API_V1_PREFIX)
+app.include_router(retrieval_router, prefix=API_V1_PREFIX)
 app.include_router(visualization_router, prefix=API_V1_PREFIX)
 app.include_router(exports_router, prefix=API_V1_PREFIX)
 
