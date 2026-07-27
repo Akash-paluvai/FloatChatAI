@@ -50,7 +50,9 @@ class ExecutionEngine:
         # Execute notebook plan over ParquetLoader
         df_res, info = ParquetLoader.execute_plan(plan.parsed_spec)
 
-        params = {"query": prompt, "ocean_region": plan.parsed_spec.get("region", {}).get("name", "Bay of Bengal")}
+        region_info = plan.parsed_spec.get("region") if plan.parsed_spec else None
+        region_name = region_info.get("name", "Bay of Bengal") if region_info else "Bay of Bengal"
+        params = {"query": prompt, "ocean_region": region_name}
 
         for tool_name in plan.selected_tools:
             try:

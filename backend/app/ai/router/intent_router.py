@@ -43,9 +43,20 @@ class AIIntentRouter:
 
     @classmethod
     def parse_query(cls, prompt: str) -> Dict[str, Any]:
-        p_lower = prompt.lower()
+        p_lower = prompt.lower().strip()
 
-        # 1. Variables
+        # 1. Check Greeting Intent
+        if re.search(r'\b(hi|hello|hey|greetings|who are you|good morning|good afternoon)\b', p_lower):
+            return {
+                "raw": prompt,
+                "intent": "Greeting",
+                "variables": [],
+                "region": None,
+                "depth_filter": None,
+                "time": None
+            }
+
+        # 2. Variables
         vars_found = set()
         for k, v in cls.VARIABLES_MAP.items():
             if k in p_lower:
@@ -53,14 +64,14 @@ class AIIntentRouter:
         if not vars_found:
             vars_found = {"TEMP", "PSAL"}
 
-        # 2. Region BBox
+        # 3. Region BBox
         matched_region = None
         for r_key, r_info in cls.REGIONS.items():
             if r_key in p_lower:
                 matched_region = r_info
                 break
 
-        # 3. Depth Filter
+        # 4. Depth Filter
         depth_filter = None
         depth_point_match = re.search(r'(?:at|near|depth)\s*(\d+)\s*m', p_lower)
         depth_range_match = re.search(r'(\d+)\s*-\s*(\d+)\s*m', p_lower)
@@ -73,7 +84,7 @@ class AIIntentRouter:
             d_max = float(depth_range_match.group(2))
             depth_filter = {"type": "range", "min_m": d_min, "max_m": d_max}
 
-        # 4. Time Window
+        # 5. Time Window
         now = datetime(2024, 12, 31)
         start_date = now - timedelta(days=365)
         end_date = now
@@ -89,10 +100,8 @@ class AIIntentRouter:
             n_months = int(last_months_match.group(1))
             start_date = now - timedelta(days=n_months * 30)
 
-        # 5. Determine Intent
-        if "greeting" in p_lower or "hello" in p_lower:
-            intent = "Greeting"
-        elif "export" in p_lower or "download" in p_lower:
+        # 6. Determine Intent
+        if "export" in p_lower or "download" in p_lower:
             intent = "Export request"
         elif "plot" in p_lower or "chart" in p_lower or "3d" in p_lower:
             intent = "Visualization request"

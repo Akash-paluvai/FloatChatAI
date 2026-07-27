@@ -12,9 +12,12 @@ class ResponseFormatter:
         citations = agent_output.get("citations", [])
         confidence = agent_output.get("confidence", {})
 
-        formatted_md = f"{response_text}\n\n### 🔬 Scientific Data Citations:\n"
-        for c in citations:
-            formatted_md += f"- **{c['dataset_name']}** ({c['provider']}) | WMO Float #{c['wmo_id']} | Coords: {c['coordinates']} | Score: {c['retrieval_score']}\n"
+        if citations:
+            formatted_md = f"{response_text}\n\n### 🔬 Scientific Data Citations:\n"
+            for c in citations:
+                formatted_md += f"- **{c['dataset_name']}** ({c['provider']}) | WMO Float #{c['wmo_id']} | Coords: {c['coordinates']} | Score: {c['retrieval_score']}\n"
+        else:
+            formatted_md = response_text
 
         return {
             "markdown_response": formatted_md,

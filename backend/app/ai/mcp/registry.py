@@ -19,30 +19,63 @@ class ToolRegistry:
     """Central MCP Tool Registry managing 10 scientific tools."""
 
     def __init__(self):
+        pg_tool = PostgreSQLTool()
+        ret_tool = RetrievalTool()
+        kg_tool = KnowledgeGraphTool()
+        stat_tool = StatisticsTool()
+        reg_tool = OceanRegionTool()
+        exp_tool = ExportTool()
+        viz_tool = VisualizationTool()
+        meta_tool = MetadataTool()
+        ds_tool = DatasetTool()
+        bm_tool = BenchmarkTool()
+
         self.tools: Dict[str, Any] = {
-            "postgresql_spatial_query": PostgreSQLTool(),
-            "semantic_hybrid_retrieval": RetrievalTool(),
-            "knowledge_graph_search": KnowledgeGraphTool(),
-            "ocean_statistics_calculator": StatisticsTool(),
-            "ocean_region_geometry": OceanRegionTool(),
-            "dataset_subset_export": ExportTool(),
-            "plotly_visualization_generator": VisualizationTool(),
-            "dataset_metadata_sidecar": MetadataTool(),
-            "open_dataset_repository": DatasetTool(),
-            "system_performance_benchmark": BenchmarkTool(),
+            "postgresql_spatial_query": pg_tool,
+            "PostgreSQLTool": pg_tool,
+
+            "semantic_hybrid_retrieval": ret_tool,
+            "RetrievalTool": ret_tool,
+
+            "knowledge_graph_search": kg_tool,
+            "KnowledgeGraphTool": kg_tool,
+
+            "ocean_statistics_calculator": stat_tool,
+            "StatisticsTool": stat_tool,
+
+            "ocean_region_geometry": reg_tool,
+            "OceanRegionTool": reg_tool,
+
+            "dataset_subset_export": exp_tool,
+            "ExportTool": exp_tool,
+
+            "plotly_visualization_generator": viz_tool,
+            "VisualizationTool": viz_tool,
+
+            "dataset_metadata_sidecar": meta_tool,
+            "MetadataTool": meta_tool,
+
+            "open_dataset_repository": ds_tool,
+            "DatasetTool": ds_tool,
+
+            "system_performance_benchmark": bm_tool,
+            "BenchmarkTool": bm_tool,
         }
 
     def get_tool(self, name: str) -> Optional[Any]:
         return self.tools.get(name)
 
     def list_tools(self) -> List[Dict[str, Any]]:
+        unique_tools = {}
+        for t in self.tools.values():
+            unique_tools[t.name] = t
         return [
             {
                 "name": t.name,
                 "description": t.description,
                 "permissions": t.permissions,
             }
-            for t in self.tools.values()
+            for t in unique_tools.values()
         ]
 
 
