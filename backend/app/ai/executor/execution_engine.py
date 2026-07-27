@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from loguru import logger
 from app.ai.router.intent_router import AIIntentRouter, ToolRanker
 from app.ai.mcp.registry import mcp_server
+from app.database.loaders.parquet_loader import ParquetLoader
 
 
 class TaskPlanSpec(BaseModel):
@@ -13,6 +14,7 @@ class TaskPlanSpec(BaseModel):
     execution_order: List[str]
     parallel_execution: bool = True
     max_retries: int = 2
+    parsed_spec: Dict[str, Any] = Field(default_factory=dict)
 
 
 class TaskPlanner:
@@ -29,7 +31,8 @@ class TaskPlanner:
             selected_tools=tools,
             execution_order=tools,
             parallel_execution=len(tools) > 1,
-            max_retries=2
+            max_retries=2,
+            parsed_spec=route["parsed_spec"]
         )
 
 
@@ -44,7 +47,10 @@ class ExecutionEngine:
         tool_results = {}
         failures = []
 
-        params = {"query": prompt, "ocean_region": "Bay of Bengal"}
+        # Execute notebook plan over ParquetLoader
+        df_res, info = ParquetLoader.execute_plan(plan.parsed_spec)
+
+        params = {"query": prompt, "ocean_region": plan.parsed_spec.get("region", {}).get("name", "Bay of Bengal")}
 
         for tool_name in plan.selected_tools:
             try:
@@ -53,6 +59,12 @@ class ExecutionEngine:
             except Exception as e:
                 logger.warning(f"ExecutionEngine tool failure for {tool_name}: {e}")
                 failures.append({"tool": tool_name, "error": str(e)})
+
+        tool_results["notebook_dataframe_sample"] = {
+            "n_rows": len(df_res),
+            "columns": list(df_res.columns),
+            "sample_rows": df_res.head(5).to_dict(orient="records")
+        }
 
         return {
             "status": "COMPLETED" if not failures else "PARTIAL_SUCCESS",
