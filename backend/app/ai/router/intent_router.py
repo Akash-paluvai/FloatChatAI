@@ -1,53 +1,107 @@
-"""AIIntentRouter & ToolRanker modules."""
-from typing import Dict, Any, List
+"""Notebook Fidelity AI Intent Router & Scientific Query Parser matching reference notebooks."""
+import re
+from typing import Dict, Any, List, Optional
+from datetime import datetime, timedelta
 
 
 class AIIntentRouter:
-    """Classifies user prompts into 10 structural AI intents."""
+    """Parses natural language oceanographic prompts using notebook regex & bounding boxes."""
 
-    @staticmethod
-    def route_intent(prompt: str) -> Dict[str, Any]:
+    REGIONS = {
+        "bay of bengal": {"name": "Bay of Bengal", "bbox": {"lat_min": 5.0, "lat_max": 22.0, "lon_min": 80.0, "lon_max": 95.0}},
+        "arabian sea": {"name": "Arabian Sea", "bbox": {"lat_min": 5.0, "lat_max": 25.0, "lon_min": 50.0, "lon_max": 77.0}},
+        "indian ocean": {"name": "Indian Ocean", "bbox": {"lat_min": -40.0, "lat_max": 30.0, "lon_min": 20.0, "lon_max": 120.0}},
+        "equatorial indian ocean": {"name": "Equatorial Indian Ocean", "bbox": {"lat_min": -10.0, "lat_max": 10.0, "lon_min": 50.0, "lon_max": 100.0}},
+        "southern ocean": {"name": "Southern Ocean", "bbox": {"lat_min": -70.0, "lat_max": -40.0, "lon_min": 20.0, "lon_max": 120.0}},
+    }
+
+    VARIABLES_MAP = {
+        "temperature": "TEMP", "temp": "TEMP", "sst": "TEMP",
+        "salinity": "PSAL", "psal": "PSAL",
+        "pressure": "PRES", "pres": "PRES",
+        "oxygen": "DOXY", "doxy": "DOXY",
+        "chlorophyll": "CHLA", "chla": "CHLA",
+        "nitrate": "NITRATE"
+    }
+
+    @classmethod
+    def parse_query(cls, prompt: str) -> Dict[str, Any]:
         p_lower = prompt.lower()
 
-        if any(k in p_lower for k in ["greeting", "hello", "hi", "hey"]):
+        # 1. Variables
+        vars_found = set()
+        for k, v in cls.VARIABLES_MAP.items():
+            if k in p_lower:
+                vars_found.add(v)
+        if not vars_found:
+            vars_found = {"TEMP", "PSAL"}
+
+        # 2. Region BBox
+        matched_region = None
+        for r_key, r_info in cls.REGIONS.items():
+            if r_key in p_lower:
+                matched_region = r_info
+                break
+
+        # 3. Depth Filter
+        depth_filter = None
+        depth_point_match = re.search(r'(?:at|near|depth)\s*(\d+)\s*m', p_lower)
+        depth_range_match = re.search(r'(\d+)\s*-\s*(\d+)\s*m', p_lower)
+
+        if depth_point_match:
+            d_val = float(depth_point_match.group(1))
+            depth_filter = {"type": "point", "m": d_val, "tol": 10.0}
+        elif depth_range_match:
+            d_min = float(depth_range_match.group(1))
+            d_max = float(depth_range_match.group(2))
+            depth_filter = {"type": "range", "min_m": d_min, "max_m": d_max}
+
+        # 4. Time Window
+        now = datetime(2024, 12, 31)
+        start_date = now - timedelta(days=365)
+        end_date = now
+
+        year_match = re.search(r'\b(2022|2023|2024)\b', p_lower)
+        if year_match:
+            yr = int(year_match.group(1))
+            start_date = datetime(yr, 1, 1)
+            end_date = datetime(yr, 12, 31)
+
+        last_months_match = re.search(r'last\s*(\d+)\s*months', p_lower)
+        if last_months_match:
+            n_months = int(last_months_match.group(1))
+            start_date = now - timedelta(days=n_months * 30)
+
+        # 5. Determine Intent
+        if "greeting" in p_lower or "hello" in p_lower:
             intent = "Greeting"
-        elif any(k in p_lower for k in ["dataset", "open dataset", "source", "incois", "erddap"]):
-            intent = "Dataset lookup"
-        elif any(k in p_lower for k in ["export", "download csv", "parquet", "geojson"]):
+        elif "export" in p_lower or "download" in p_lower:
             intent = "Export request"
-        elif any(k in p_lower for k in ["plot", "graph", "chart", "visualize", "contour", "3d"]):
+        elif "plot" in p_lower or "chart" in p_lower or "3d" in p_lower:
             intent = "Visualization request"
-        elif any(k in p_lower for k in ["statistic", "average", "mean", "sst", "anomaly", "climatology"]):
+        elif "statistic" in p_lower or "average" in p_lower or "anomaly" in p_lower:
             intent = "Statistics"
-        elif any(k in p_lower for k in ["compare", "versus", "difference", "baseline"]):
-            intent = "Comparison"
-        elif any(k in p_lower for k in ["where", "region", "bay of bengal", "arabian sea", "lat", "lon", "near"]):
-            intent = "Spatial query"
-        elif any(k in p_lower for k in ["when", "date", "2022", "2023", "2024", "year", "month"]):
-            intent = "Temporal query"
         else:
-            intent = "Scientific explanation"
+            intent = "Spatial query" if matched_region else "Scientific explanation"
 
         return {
-            "prompt": prompt,
+            "raw": prompt,
             "intent": intent,
-            "requires_tools": intent not in ["Greeting"],
+            "variables": list(vars_found),
+            "region": matched_region,
+            "depth_filter": depth_filter,
+            "time": {
+                "start": start_date.isoformat(),
+                "end": end_date.isoformat()
+            }
         }
 
-
-class ToolRanker:
-    """Ranks candidate MCP tools based on query intent."""
-
-    @staticmethod
-    def rank_tools(intent: str) -> List[str]:
-        if intent in ["Spatial query", "Scientific explanation"]:
-            return ["semantic_hybrid_retrieval", "postgresql_spatial_query", "knowledge_graph_search"]
-        elif intent == "Statistics":
-            return ["ocean_statistics_calculator", "semantic_hybrid_retrieval"]
-        elif intent == "Visualization request":
-            return ["plotly_visualization_generator", "semantic_hybrid_retrieval"]
-        elif intent == "Export request":
-            return ["dataset_subset_export", "postgresql_spatial_query"]
-        elif intent == "Dataset lookup":
-            return ["open_dataset_repository", "dataset_metadata_sidecar"]
-        return ["semantic_hybrid_retrieval"]
+    @classmethod
+    def route_intent(cls, prompt: str) -> Dict[str, Any]:
+        parsed = cls.parse_query(prompt)
+        return {
+            "prompt": prompt,
+            "intent": parsed["intent"],
+            "requires_tools": parsed["intent"] not in ["Greeting"],
+            "parsed_spec": parsed
+        }
