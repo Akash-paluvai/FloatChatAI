@@ -4,6 +4,23 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 
 
+class ToolRanker:
+    """ToolRanker maps intent to ranked list of scientific tools."""
+
+    INTENT_TOOL_MAP = {
+        "Spatial query": ["PostgreSQLTool", "RetrievalTool", "VisualizationTool", "MetadataTool"],
+        "Statistics": ["StatisticsTool", "PostgreSQLTool", "VisualizationTool", "MetadataTool"],
+        "Visualization request": ["VisualizationTool", "PostgreSQLTool", "MetadataTool"],
+        "Export request": ["ExportTool", "PostgreSQLTool", "MetadataTool"],
+        "Scientific explanation": ["RetrievalTool", "KnowledgeGraphTool", "PostgreSQLTool", "MetadataTool"],
+        "Greeting": ["MetadataTool"]
+    }
+
+    @classmethod
+    def rank_tools(cls, intent: str) -> List[str]:
+        return cls.INTENT_TOOL_MAP.get(intent, ["PostgreSQLTool", "RetrievalTool", "MetadataTool"])
+
+
 class AIIntentRouter:
     """Parses natural language oceanographic prompts using notebook regex & bounding boxes."""
 

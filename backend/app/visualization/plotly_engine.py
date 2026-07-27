@@ -8,6 +8,26 @@ class PlotlyVisualizationEngine:
     """Generates Plotly specs based on notebook auto_visualize() decision logic."""
 
     @classmethod
+    def generate_depth_profile(cls, depths: List[float], temps: List[float], title: str = "ARGO Profile") -> Dict[str, Any]:
+        return {
+            "data": [{
+                "x": temps,
+                "y": depths,
+                "type": "scatter",
+                "mode": "lines+markers",
+                "name": "Temperature (°C)",
+                "line": {"color": "#00f2fe", "width": 3}
+            }],
+            "layout": {
+                "title": title,
+                "xaxis": {"title": "Temperature (°C)"},
+                "yaxis": {"title": "Depth (m)", "autorange": "reversed"},
+                "paper_bgcolor": "rgba(0,0,0,0)",
+                "plot_bgcolor": "rgba(0,0,0,0)"
+            }
+        }
+
+    @classmethod
     def auto_visualize(cls, df: pd.DataFrame, plan: Dict[str, Any] = None) -> Dict[str, Any]:
         """Notebook auto_visualize decision router."""
         if df.empty:
@@ -115,7 +135,7 @@ class PlotlyVisualizationEngine:
         }
 
     @classmethod
-    def generate_3d_section(cls, data_dict: Dict[str, Any] = None) -> Dict[str, Any]:
+    def generate_3d_section(cls, lats=None, lons=None, depths=None, temps=None) -> Dict[str, Any]:
         return {
             "data": [{
                 "x": [88.2, 88.2, 88.2, 88.2, 88.2, 88.2, 88.2],

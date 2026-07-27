@@ -31,9 +31,17 @@ class MetadataFilterEngine:
         user_start = pd.to_datetime(time_spec.get('start', '2024-01-01')).replace(tzinfo=None)
         user_end = pd.to_datetime(time_spec.get('end', '2024-12-31')).replace(tzinfo=None)
 
+        if user_start > dataset_end or user_end < dataset_start:
+            # Query range outside dataset -> fallback to full dataset window
+            user_start = dataset_start
+            user_end = dataset_end
+        else:
+            user_start = max(user_start, dataset_start)
+            user_end = min(user_end, dataset_end)
+
         plan['time'] = {
-            'start': max(user_start, dataset_start).isoformat(),
-            'end': min(user_end, dataset_end).isoformat()
+            'start': user_start.isoformat(),
+            'end': user_end.isoformat()
         }
         return plan
 

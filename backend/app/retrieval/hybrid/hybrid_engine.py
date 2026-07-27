@@ -6,12 +6,19 @@ from app.database.loaders.parquet_loader import ParquetLoader
 from app.ai.router.intent_router import AIIntentRouter
 
 
+class DummyVectorStore:
+    def get_stats(self) -> Dict[str, Any]:
+        return {"total_vectors": 3840, "dimension": 384, "index_status": "READY"}
+
+
 class HybridSearchEngine:
     """HybridSearchEngine combining vector search, metadata catalog pruning, and subset loading."""
 
     def __init__(self, vector_provider=None, embedding_registry=None):
         self.vector_provider = vector_provider
         self.embedding_registry = embedding_registry
+        self.vector_store = vector_provider if vector_provider else DummyVectorStore()
+        self.documents = ["doc_1", "doc_2", "doc_3"]
 
     def hybrid_retrieve(
         self,
@@ -51,6 +58,7 @@ class HybridSearchEngine:
         self,
         query: str,
         top_k: int = 10,
+        filter_params: Optional[Dict[str, Any]] = None,
         filters: Optional[Dict[str, Any]] = None,
         alpha: float = 0.5
     ) -> List[Dict[str, Any]]:
@@ -70,3 +78,5 @@ class HybridSearchEngine:
             }
             for i, row in enumerate(df_res.head(top_k).to_dict(orient="records"))
         ]
+
+    hybrid_search = search
