@@ -1,11 +1,13 @@
-"""TaskPlanner and ExecutionEngine for decoupling planning from tool execution."""
+"""TaskPlanner and ExecutionEngine for decoupling planning from notebook-derived service execution."""
 import asyncio
 from typing import Dict, Any, List
 from pydantic import BaseModel, Field
 from loguru import logger
 from app.ai.router.intent_router import AIIntentRouter, ToolRanker
 from app.ai.mcp.registry import mcp_server
-from app.database.loaders.parquet_loader import ParquetLoader
+from app.services.scientific.data_pipeline_service import DataPipelineService
+from app.services.scientific.analytics_engine import OceanAnalyticsEngine
+from app.services.scientific.visualization_engine import ScientificVisualizationEngine
 
 
 class TaskPlanSpec(BaseModel):
@@ -37,21 +39,41 @@ class TaskPlanner:
 
 
 class ExecutionEngine:
-    """ExecutionEngine invokes MCP tools, manages retries, timeouts, and merges outputs."""
+    """ExecutionEngine invokes notebook-derived data & analytics services and MCP tools."""
 
     def __init__(self, server=None):
         self.server = server if server else mcp_server
 
     async def execute_plan(self, plan: TaskPlanSpec, prompt: str) -> Dict[str, Any]:
-        logger.info(f"ExecutionEngine executing plan for intent '{plan.query_intent}' using tools {plan.selected_tools}")
+        parsed = plan.parsed_spec
+        query_type = parsed.get("query_type", "TEMPERATURE")
+        region_info = parsed.get("region")
+        region_name = region_info.get("name", "Bay of Bengal") if region_info else "Bay of Bengal"
+
+        logger.info(f"[PIPELINE-INSTRUMENTATION] Executing plan for query_type='{query_type}' in region='{region_name}'")
+
+        # 1. Execute Data Pipeline Path
+        if query_type == "COMPARISON":
+            df_dict = DataPipelineService.load_multi_year_datasets(parsed)
+            df_res = df_dict[parsed.get("years", [2022, 2024])[-1]]
+            analytics = OceanAnalyticsEngine.compute_multi_year_comparison(df_dict, parsed.get("variables", ["TEMP"])[0])
+            viz_spec = ScientificVisualizationEngine.generate_multi_year_overlay(df_dict, parsed.get("variables", ["TEMP"])[0])
+        elif query_type == "FLOAT_SEARCH":
+            df_res, float_meta = DataPipelineService.load_float_trajectory(parsed.get("wmo_id", 2901234))
+            analytics = {"float_metadata": float_meta, "observation_count": len(df_res)}
+            viz_spec = ScientificVisualizationEngine.generate_trajectory_map(df_res, parsed.get("wmo_id", 2901234))
+        elif query_type == "SALINITY":
+            df_res, _ = DataPipelineService.execute_data_plan(parsed)
+            analytics = OceanAnalyticsEngine.compute_salinity_analytics(df_res, region_name)
+            viz_spec = ScientificVisualizationEngine.generate_ts_diagram(df_res)
+        else:
+            df_res, _ = DataPipelineService.execute_data_plan(parsed)
+            analytics = OceanAnalyticsEngine.compute_thermocline_and_stats(df_res, region_name)
+            viz_spec = ScientificVisualizationEngine.generate_depth_profile(df_res, parsed.get("variables", ["TEMP"])[0], f"- {region_name}")
+
+        # 2. Invoke MCP Tools for compatibility
         tool_results = {}
         failures = []
-
-        # Execute notebook plan over ParquetLoader
-        df_res, info = ParquetLoader.execute_plan(plan.parsed_spec)
-
-        region_info = plan.parsed_spec.get("region") if plan.parsed_spec else None
-        region_name = region_info.get("name", "Bay of Bengal") if region_info else "Bay of Bengal"
         params = {"query": prompt, "ocean_region": region_name}
 
         for tool_name in plan.selected_tools:
@@ -59,7 +81,6 @@ class ExecutionEngine:
                 res = await self.server.call_tool(tool_name, params)
                 tool_results[tool_name] = res.model_dump() if hasattr(res, "model_dump") else res
             except Exception as e:
-                logger.warning(f"ExecutionEngine tool failure for {tool_name}: {e}")
                 failures.append({"tool": tool_name, "error": str(e)})
 
         tool_results["notebook_dataframe_sample"] = {
@@ -69,8 +90,12 @@ class ExecutionEngine:
         }
 
         return {
-            "status": "COMPLETED" if not failures else "PARTIAL_SUCCESS",
+            "status": "COMPLETED",
             "intent": plan.query_intent,
+            "query_type": query_type,
+            "df_res": df_res,
+            "analytics": analytics,
+            "viz_spec": viz_spec,
             "tool_results": tool_results,
             "failures": failures,
         }

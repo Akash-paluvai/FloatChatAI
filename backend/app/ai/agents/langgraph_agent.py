@@ -16,12 +16,12 @@ class FloatChatGraphAgent:
         self.executor = executor if executor else ExecutionEngine()
 
     async def run_workflow(self, prompt: str, session_id: str = "default_session") -> Dict[str, Any]:
-        logger.info(f"[PIPELINE-AUDIT] USER PROMPT: '{prompt}'")
+        logger.info(f"[PIPELINE-INSTRUMENTATION] 1. USER PROMPT: '{prompt}'")
 
         # 1. Guardrails Check
         guard = AIGuardrails.check_input(prompt)
         if not guard["safe"]:
-            logger.warning(f"[PIPELINE-AUDIT] GUARDRAIL ALERT: {guard['reason']}")
+            logger.warning(f"[PIPELINE-INSTRUMENTATION] GUARDRAIL ALERT: {guard['reason']}")
             return {
                 "success": False,
                 "response": f"Security Guardrail Alert: {guard['reason']}",
@@ -34,15 +34,16 @@ class FloatChatGraphAgent:
         # 2. Planning
         plan = TaskPlanner.create_plan(prompt)
         parsed = plan.parsed_spec
-        logger.info(f"[PIPELINE-AUDIT] DETECTED INTENT: {plan.query_intent} | TOOLS: {plan.selected_tools}")
+        logger.info(f"[PIPELINE-INSTRUMENTATION] 2. DETECTED INTENT: {plan.query_intent} | QUERY TYPE: {parsed.get('query_type')}")
 
-        # 3. Handle Greeting intent without SQL or Citations
-        if plan.query_intent == "Greeting":
+        # 3. Handle Greeting intent directly without database or execution engine overhead
+        if parsed.get("query_type") == "GREETING":
             ai_text = await self.provider.generate(prompt)
             return {
                 "success": True,
                 "prompt": prompt,
                 "intent": plan.query_intent,
+                "query_type": "GREETING",
                 "response": ai_text,
                 "generated_sql": None,
                 "citations": [],
@@ -56,7 +57,7 @@ class FloatChatGraphAgent:
                 "workflow_steps": ["1. Intent Categorized: Greeting", "2. Direct Response Assembled"]
             }
 
-        # 4. Execution
+        # 4. Execution over Data Pipeline & Analytics Engines
         exec_res = await self.executor.execute_plan(plan, prompt)
 
         # 5. Reasoning & Verification
@@ -67,8 +68,8 @@ class FloatChatGraphAgent:
         # 6. Citations
         citations = CitationEngine.generate_citations(exec_res["tool_results"])
 
-        # 7. Response Generation
-        ai_text = await self.provider.generate(prompt)
+        # 7. LLM Scientific Explanation
+        ai_text = await self.provider.generate(prompt, context_data=exec_res["analytics"])
 
         # 8. Dynamic PostGIS SQL Generation
         region_info = parsed.get("region")
@@ -82,50 +83,45 @@ class FloatChatGraphAgent:
         elif depth_spec and depth_spec.get("type") == "range":
             depth_clause = f" AND m.depth_m BETWEEN {depth_spec['min_m']} AND {depth_spec['max_m']}"
 
+        wmo_clause = f" AND f.platform_number = {parsed['wmo_id']}" if parsed.get("wmo_id") else ""
+
         generated_sql = (
             f"SELECT f.platform_number, p.latitude, p.longitude, m.depth_m, m.temperature_c, m.salinity_psu\n"
             f"FROM argo_profiles p\n"
             f"JOIN argo_floats f ON p.float_id = f.id\n"
             f"JOIN argo_measurements m ON m.profile_id = p.id\n"
             f"WHERE ST_Contains(ST_MakeEnvelope({bbox['lon_min']}, {bbox['lat_min']}, {bbox['lon_max']}, {bbox['lat_max']}, 4326),\n"
-            f"                  ST_SetSRID(ST_MakePoint(p.longitude, p.latitude), 4326)){depth_clause}\n"
+            f"                  ST_SetSRID(ST_MakePoint(p.longitude, p.latitude), 4326)){depth_clause}{wmo_clause}\n"
             f"ORDER BY m.depth_m ASC LIMIT 50;"
         )
 
-        region_name = region_info["name"] if region_info else "Indian Ocean"
-        analytical_summary = {
-            "ocean_region": region_name,
-            "avg_temp": "28.5°C (Surface)" if region_name == "Bay of Bengal" else "27.8°C (Surface)",
-            "max_depth": "2,000 meters",
-            "salinity_range": "32.5 – 34.8 PSU" if region_name == "Bay of Bengal" else "35.2 – 36.8 PSU",
-            "anomaly_detected": False
-        }
-
-        logger.info(f"[PIPELINE-AUDIT] GENERATED SQL: {generated_sql[:100]}...")
+        logger.info(f"[PIPELINE-INSTRUMENTATION] 8. GENERATED SQL: {generated_sql[:100]}...")
 
         return {
             "success": True,
             "prompt": prompt,
             "intent": plan.query_intent,
+            "query_type": parsed.get("query_type"),
             "response": ai_text,
             "generated_sql": generated_sql,
             "reasoning": reasoning,
             "verification": verification,
             "confidence": confidence,
             "citations": [c.model_dump() for c in citations],
-            "analytical_summary": analytical_summary,
+            "analytical_summary": exec_res["analytics"],
+            "viz_spec": exec_res["viz_spec"],
             "suggested_followups": [
-                f"Compare {region_name} profile with historic 2022 baseline",
-                f"Export GeoJSON telemetry dataset for {region_name}",
+                f"Compare {region_info['name'] if region_info else 'Indian Ocean'} profile with historic 2022 baseline",
+                f"Export GeoJSON telemetry dataset for {region_info['name'] if region_info else 'Indian Ocean'}",
                 "Analyze thermocline gradient depth between 100m–300m"
             ],
             "tool_results": exec_res["tool_results"],
             "workflow_steps": [
                 "1. Guardrail Security Verified",
-                f"2. Intent Categorized: {plan.query_intent}",
-                f"3. Execution Plan Built ({len(plan.selected_tools)} tools)",
-                "4. Parallel MCP Tool Execution Completed",
+                f"2. Intent Categorized: {plan.query_intent} ({parsed.get('query_type')})",
+                f"3. Scientific Data Pipeline Executed ({len(exec_res['df_res'])} rows)",
+                "4. Analytics & Plotly Visualization Engine Executed",
                 "5. Scientific Evidence Verified & Grounded",
-                "6. Dynamic PostGIS Query & Metadata Citations Attached",
+                "6. Exact Metadata Citations & PostGIS Query Attached",
             ]
         }

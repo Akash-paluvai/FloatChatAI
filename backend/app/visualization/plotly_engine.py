@@ -1,138 +1,37 @@
-"""PlotlyVisualizationEngine implementing notebook auto_visualize decision engine and inverted depth profiles."""
+"""PlotlyVisualizationEngine wrapping ScientificVisualizationEngine for notebook fidelity."""
 from typing import Dict, Any, List
 import pandas as pd
-import numpy as np
+from app.services.scientific.visualization_engine import ScientificVisualizationEngine
 
 
 class PlotlyVisualizationEngine:
-    """Generates Plotly specs based on notebook auto_visualize() decision logic."""
+    """Wrapper delegating chart generation to ScientificVisualizationEngine."""
 
     @classmethod
     def generate_depth_profile(cls, depths: List[float], temps: List[float], title: str = "ARGO Profile") -> Dict[str, Any]:
-        return {
-            "data": [{
-                "x": temps,
-                "y": depths,
-                "type": "scatter",
-                "mode": "lines+markers",
-                "name": "Temperature (°C)",
-                "line": {"color": "#00f2fe", "width": 3}
-            }],
-            "layout": {
-                "title": title,
-                "xaxis": {"title": "Temperature (°C)"},
-                "yaxis": {"title": "Depth (m)", "autorange": "reversed"},
-                "paper_bgcolor": "rgba(0,0,0,0)",
-                "plot_bgcolor": "rgba(0,0,0,0)"
-            }
-        }
+        df = pd.DataFrame({"DEPTH_M": depths, "TEMP": temps})
+        return ScientificVisualizationEngine.generate_depth_profile(df, "TEMP")
 
     @classmethod
     def auto_visualize(cls, df: pd.DataFrame, plan: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Notebook auto_visualize decision router."""
-        if df.empty:
-            return {"type": "empty", "config": {"data": [], "layout": {"title": "No Data Available"}}}
-
+        """Auto visualizer decision router based on query intent & data shape."""
         plan = plan or {}
-        variables = plan.get("variables", ["TEMP", "PSAL"])
-        primary_var = next((v for v in variables if v in df.columns), "TEMP")
+        q_type = plan.get("query_type", "TEMPERATURE")
+        variables = plan.get("variables", ["TEMP"])
+        primary_var = variables[0] if variables else "TEMP"
 
-        # 1. Check Timeseries Plot: JULD unique > 1 and point depth filter
-        if "JULD" in df.columns and df["JULD"].nunique() > 1:
-            d_filter = plan.get("depth_filter")
-            if d_filter and d_filter.get("type") == "point":
-                ts = df.groupby("JULD")[primary_var].mean().reset_index()
-                return {
-                    "type": "timeseries",
-                    "config": {
-                        "data": [{
-                            "x": [str(d) for d in ts["JULD"]],
-                            "y": ts[primary_var].tolist(),
-                            "type": "scatter",
-                            "mode": "lines+markers",
-                            "name": primary_var,
-                            "line": {"color": "#00f2fe", "width": 3}
-                        }],
-                        "layout": {
-                            "title": f"Timeseries: {primary_var}",
-                            "xaxis": {"title": "Time"},
-                            "yaxis": {"title": primary_var},
-                            "paper_bgcolor": "rgba(0,0,0,0)",
-                            "plot_bgcolor": "rgba(0,0,0,0)"
-                        }
-                    }
-                }
-
-        # 2. Check Spatial Scatter Map: LATITUDE & LONGITUDE unique > 3
-        if "LATITUDE" in df.columns and "LONGITUDE" in df.columns and df["LATITUDE"].nunique() > 3 and df["LONGITUDE"].nunique() > 3:
-            return {
-                "type": "spatial_scatter",
-                "config": {
-                    "data": [{
-                        "x": df["LONGITUDE"].tolist(),
-                        "y": df["LATITUDE"].tolist(),
-                        "mode": "markers",
-                        "type": "scatter",
-                        "marker": {
-                            "size": 8,
-                            "color": df[primary_var].tolist() if primary_var in df.columns else "#00B4FF",
-                            "colorscale": "Viridis",
-                            "colorbar": {"title": primary_var}
-                        }
-                    }],
-                    "layout": {
-                        "title": f"Spatial Scatter: {primary_var}",
-                        "xaxis": {"title": "Longitude"},
-                        "yaxis": {"title": "Latitude"},
-                        "paper_bgcolor": "rgba(0,0,0,0)",
-                        "plot_bgcolor": "rgba(0,0,0,0)"
-                    }
-                }
-            }
-
-        # 3. Check Depth Profile Line Chart: DEPTH_M unique > 3 (with inverted Y-axis!)
-        if "DEPTH_M" in df.columns and df["DEPTH_M"].nunique() > 3:
-            prof = df.groupby("DEPTH_M")[primary_var].mean().reset_index().sort_values("DEPTH_M")
-            return {
-                "type": "depth_profile",
-                "config": {
-                    "data": [{
-                        "x": prof[primary_var].tolist(),
-                        "y": prof["DEPTH_M"].tolist(),
-                        "type": "scatter",
-                        "mode": "lines+markers",
-                        "name": f"{primary_var} Profile",
-                        "line": {"color": "#00f2fe", "width": 3}
-                    }],
-                    "layout": {
-                        "title": f"Depth Profile: {primary_var}",
-                        "xaxis": {"title": f"{primary_var}"},
-                        "yaxis": {"title": "Depth (m)", "autorange": "reversed"},
-                        "paper_bgcolor": "rgba(0,0,0,0)",
-                        "plot_bgcolor": "rgba(0,0,0,0)"
-                    }
-                }
-            }
-
-        # 4. Fallback Histogram / Distribution
-        vals = df[primary_var].dropna().tolist() if primary_var in df.columns else [28.5]
-        return {
-            "type": "histogram",
-            "config": {
-                "data": [{
-                    "x": vals,
-                    "type": "histogram",
-                    "marker": {"color": "#38BDF8"}
-                }],
-                "layout": {
-                    "title": f"Distribution: {primary_var}",
-                    "xaxis": {"title": primary_var},
-                    "yaxis": {"title": "Count"},
-                    "paper_bgcolor": "rgba(0,0,0,0)",
-                    "plot_bgcolor": "rgba(0,0,0,0)"
-                }
-            }
-        }
+        if q_type == "COMPARISON":
+            return {"type": "multi_year_overlay", "config": ScientificVisualizationEngine.generate_multi_year_overlay({2022: df, 2024: df}, primary_var)}
+        elif q_type == "FLOAT_SEARCH":
+            return {"type": "trajectory_map", "config": ScientificVisualizationEngine.generate_trajectory_map(df, plan.get("wmo_id", 2901234))}
+        elif q_type == "SALINITY" and "PSAL" in df.columns and "TEMP" in df.columns:
+            return {"type": "ts_diagram", "config": ScientificVisualizationEngine.generate_ts_diagram(df)}
+        elif "DEPTH_M" in df.columns and df["DEPTH_M"].nunique() > 3:
+            return {"type": "depth_profile", "config": ScientificVisualizationEngine.generate_depth_profile(df, primary_var)}
+        elif "LATITUDE" in df.columns and "LONGITUDE" in df.columns:
+            return {"type": "spatial_scatter", "config": ScientificVisualizationEngine.generate_spatial_scatter(df, primary_var)}
+        
+        return {"type": "depth_profile", "config": ScientificVisualizationEngine.generate_depth_profile(df, primary_var)}
 
     @classmethod
     def generate_3d_section(cls, lats=None, lons=None, depths=None, temps=None) -> Dict[str, Any]:
