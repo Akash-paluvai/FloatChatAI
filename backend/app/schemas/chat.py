@@ -22,9 +22,12 @@ class ChatRequest(BaseModel):
 
 
 class AnalyticalSummary(BaseModel):
-    avg_temp: str = Field(default="28.3°C (Surface)")
-    max_depth: str = Field(default="2,000 meters")
-    salinity_range: str = Field(default="33.2 – 35.0 PSU")
+    avg_temp: Optional[str] = Field(default="28.3°C (Surface)")
+    max_depth: Optional[str] = Field(default="2,000 meters")
+    salinity_range: Optional[str] = Field(default="33.2 – 35.0 PSU")
+    thermocline_gradient_depth: Optional[str] = Field(default="75m – 200m")
+    spatial_centroid: Optional[str] = Field(default="15.5°N, 88.2°E")
+    total_observations: Optional[int] = Field(default=50)
     anomaly_detected: bool = Field(default=False)
 
 
@@ -42,7 +45,9 @@ class ChatResponse(BaseModel):
     citations: List[Dict[str, Any]] = Field(default_factory=list)
     confidence_score: float = Field(default=0.94)
     sources: List[str] = Field(default_factory=lambda: ["ARGO GDAC", "Phase 5 Semantic Retrieval", "PostgreSQL/PostGIS"])
-    analytical_summary: Optional[AnalyticalSummary] = Field(default_factory=AnalyticalSummary)
+    analytical_summary: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    viz_spec: Optional[Dict[str, Any]] = Field(default=None)
+    artifacts: Optional[Dict[str, Any]] = Field(default=None)
     suggested_followups: List[str] = Field(
         default_factory=lambda: [
             "Compare profile with 2022 historic baseline",

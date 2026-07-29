@@ -32,6 +32,10 @@ export class ChatService {
         const json = await res.json();
         const apiData = json.data;
 
+        // Structured artifacts directly from backend notebook execution
+        const vizSpec = apiData.viz_spec || apiData.artifacts?.visualization;
+        const analytics = apiData.analytical_summary || apiData.artifacts?.statistics || MOCK_CHAT_HISTORY[1].analyticalSummary;
+
         const assistantMsg: ChatMessage = {
           id: apiData.message_id || `msg-${Date.now()}`,
           role: 'assistant',
@@ -39,9 +43,10 @@ export class ChatService {
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           isDemoPreview: false,
           sqlQuery: apiData.generated_sql || apiData.sql_query_preview,
-          chartData: MOCK_CHAT_HISTORY[1].chartData,
+          chartData: vizSpec ? { type: vizSpec.type, config: vizSpec.config } : MOCK_CHAT_HISTORY[1].chartData,
           mapPoints: MOCK_CHAT_HISTORY[1].mapPoints,
-          analyticalSummary: apiData.analytical_summary || MOCK_CHAT_HISTORY[1].analyticalSummary,
+          analyticalSummary: analytics,
+          artifacts: apiData.artifacts,
           suggestedFollowups: apiData.suggested_followups || [
             'Compare profile with 2022 historic baseline',
             'Download GeoJSON dataset for these floats',
