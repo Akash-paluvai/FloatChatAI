@@ -1,161 +1,226 @@
-"""Scientific Query Planner Service refactored directly from reference notebooks (Step3, 03_query_examples)."""
+"""Query Planner Service — parses natural language into structured query plans.
+Direct port of notebook parse_nl_query() and adjust_time_to_metadata()."""
 import re
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
+from typing import Dict, Any, Optional
+import pandas as pd
+from loguru import logger
+
+NAMED_REGIONS = {
+    "bay of bengal": {"lat_min": 5, "lat_max": 22, "lon_min": 80, "lon_max": 95},
+    "arabian sea": {"lat_min": 5, "lat_max": 25, "lon_min": 50, "lon_max": 75},
+    "indian ocean": {"lat_min": -30, "lat_max": 30, "lon_min": 30, "lon_max": 110},
+    "south indian ocean": {"lat_min": -30, "lat_max": 0, "lon_min": 30, "lon_max": 110},
+    "north indian ocean": {"lat_min": 0, "lat_max": 30, "lon_min": 30, "lon_max": 110},
+    "equatorial indian ocean": {"lat_min": -10, "lat_max": 10, "lon_min": 40, "lon_max": 100},
+}
+
+KNOWN_INTENTS = [
+    "TEMPERATURE", "SALINITY", "TS_DIAGRAM", "FLOAT_LIST", "DEPTH_PROFILE",
+    "COMPARISON", "SPATIAL_MAP", "TRAJECTORY", "ANOMALY", "GREETING", "GENERAL"
+]
+
+
+class QueryPlannerService:
+    """Direct port of notebook parse_nl_query() + intent detection."""
+
+    @classmethod
+    def parse(cls, query: str) -> Dict[str, Any]:
+        """Parse a natural language ocean science query into a structured plan."""
+        txt = query.lower().strip()
+        plan = {
+            "raw": query,
+            "intent": cls._detect_intent(txt),
+            "variables": [],
+            "depth_filter": None,
+            "region": None,
+            "time": None,
+            "years": None,
+        }
+
+        # --- Variable detection (from notebook) ---
+        if re.search(r"\btemp(erature)?\b", txt):
+            plan["variables"].append("TEMP")
+        if re.search(r"\bpsal\b|\bsalinity\b", txt):
+            plan["variables"].append("PSAL")
+        if not plan["variables"]:
+            # Default to both variables for general queries
+            plan["variables"] = ["TEMP", "PSAL"]
+
+        # --- Depth parsing (from notebook) ---
+        m_range = re.search(r"(\d{1,5})\s*[-–to]+\s*(\d{1,5})\s*m\b", txt)
+        m_single = re.search(r"(\d{1,5})\s*m\b", txt)
+        if m_range:
+            d0, d1 = int(m_range.group(1)), int(m_range.group(2))
+            plan["depth_filter"] = {"type": "range", "min_m": min(d0, d1), "max_m": max(d0, d1)}
+        elif m_single:
+            val = int(m_single.group(1))
+            plan["depth_filter"] = {"type": "point", "m": val, "tol": 10}
+
+        # --- Region detection (from notebook) ---
+        for name, bbox in NAMED_REGIONS.items():
+            if name in txt:
+                plan["region"] = {"name": name, "bbox": bbox}
+                break
+
+        # Custom bbox parsing
+        if not plan["region"]:
+            m_bbox = re.search(
+                r"lat(?:itude)?\s*([-\d.]+)\s*[-–to]+\s*([-\d.]+).*lon(?:gitude)?\s*([-\d.]+)\s*[-–to]+\s*([-\d.]+)",
+                txt
+            )
+            if m_bbox:
+                plan["region"] = {
+                    "name": "custom",
+                    "bbox": {
+                        "lat_min": float(m_bbox.group(1)), "lat_max": float(m_bbox.group(2)),
+                        "lon_min": float(m_bbox.group(3)), "lon_max": float(m_bbox.group(4))
+                    }
+                }
+
+        # --- Time parsing (from notebook) ---
+        plan["time"] = cls._parse_time(txt)
+
+        # --- Multi-year comparison ---
+        year_matches = re.findall(r"(20[12]\d)", txt)
+        if len(year_matches) >= 2:
+            plan["years"] = sorted(set(int(y) for y in year_matches))
+            plan["intent"] = "COMPARISON"
+
+        # Default region to Indian Ocean if none detected
+        if not plan["region"] and plan["intent"] not in ("GREETING", "GENERAL"):
+            plan["region"] = {"name": "indian ocean", "bbox": NAMED_REGIONS["indian ocean"]}
+
+        logger.info(f"[QUERY-PLANNER] Intent={plan['intent']} Vars={plan['variables']} Region={plan['region']} Depth={plan['depth_filter']} Time={plan['time']}")
+        return plan
+
+    @classmethod
+    def _detect_intent(cls, txt: str) -> str:
+        """Detect query intent from text."""
+        greetings = ["hello", "hi", "hey", "good morning", "good evening", "what can you do", "help"]
+        if any(txt.strip() == g or txt.strip().startswith(g + " ") or txt.strip().startswith(g + ",") for g in greetings):
+            return "GREETING"
+
+        if any(w in txt for w in ["compare", "vs", "versus", "difference between", "trend"]):
+            return "COMPARISON"
+        if any(w in txt for w in ["t-s", "ts diagram", "temperature-salinity", "water mass"]):
+            return "TS_DIAGRAM"
+        if any(w in txt for w in ["salinity", "psal", "salt", "haline"]):
+            return "SALINITY"
+        if any(w in txt for w in ["temp", "heat", "warm", "cool", "thermal"]):
+            return "TEMPERATURE"
+        if any(w in txt for w in ["map", "spatial", "distribution", "scatter", "location"]):
+            return "SPATIAL_MAP"
+        if any(w in txt for w in ["depth", "profile", "vertical"]):
+            return "DEPTH_PROFILE"
+        if any(w in txt for w in ["float", "argo", "wmo", "platform", "trajectory"]):
+            return "FLOAT_LIST"
+        if any(w in txt for w in ["anomal", "unusual", "extreme"]):
+            return "ANOMALY"
+
+        return "GENERAL"
+
+    @classmethod
+    def _parse_time(cls, txt: str) -> Dict[str, str]:
+        """Parse time references from text — port of notebook logic."""
+        # "2022 to 2024", "2022-2024", "from 2022 to 2024"
+        m_range = re.search(r"(20[12]\d)\s*[-–to]+\s*(20[12]\d)", txt)
+        if m_range:
+            y1, y2 = int(m_range.group(1)), int(m_range.group(2))
+            return {"start": f"{min(y1,y2)}-01-01T00:00:00", "end": f"{max(y1,y2)}-12-31T23:59:59"}
+
+        # Single year "in 2023"
+        m_year = re.search(r"\b(20[12]\d)\b", txt)
+        if m_year:
+            yr = int(m_year.group(1))
+            return {"start": f"{yr}-01-01T00:00:00", "end": f"{yr}-12-31T23:59:59"}
+
+        # Month references "january 2023", "march 2024"
+        months = {"january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
+                  "july": 7, "august": 8, "september": 9, "october": 10, "november": 11, "december": 12}
+        for month_name, month_num in months.items():
+            m = re.search(rf"{month_name}\s*(20[12]\d)", txt)
+            if m:
+                yr = int(m.group(1))
+                import calendar
+                last_day = calendar.monthrange(yr, month_num)[1]
+                return {"start": f"{yr}-{month_num:02d}-01T00:00:00", "end": f"{yr}-{month_num:02d}-{last_day}T23:59:59"}
+
+        # Default to full dataset range
+        return {"start": "2022-01-01T00:00:00", "end": "2024-12-31T23:59:59"}
+
+    @classmethod
+    def adjust_time_to_metadata(cls, plan: Dict[str, Any], meta_df: pd.DataFrame) -> Dict[str, Any]:
+        """Clamp user-requested time range to what the dataset actually contains."""
+        if "juld_min_est" not in meta_df.columns:
+            return plan
+
+        meta_df_local = meta_df.copy()
+        meta_df_local["juld_min_dt"] = pd.to_datetime(meta_df_local["juld_min_est"], errors="coerce")
+        meta_df_local["juld_max_dt"] = pd.to_datetime(meta_df_local["juld_max_est"], errors="coerce")
+
+        dataset_start = meta_df_local["juld_min_dt"].min()
+        dataset_end = meta_df_local["juld_max_dt"].max()
+
+        if pd.isna(dataset_start) or pd.isna(dataset_end):
+            return plan
+
+        # Make naive
+        if hasattr(dataset_start, 'tzinfo') and dataset_start.tzinfo is not None:
+            dataset_start = dataset_start.tz_convert(None)
+        if hasattr(dataset_end, 'tzinfo') and dataset_end.tzinfo is not None:
+            dataset_end = dataset_end.tz_convert(None)
+
+        user_start = pd.to_datetime(plan["time"]["start"]).tz_localize(None) if plan.get("time") else dataset_start
+        user_end = pd.to_datetime(plan["time"]["end"]).tz_localize(None) if plan.get("time") else dataset_end
+
+        # Check if completely outside dataset
+        if user_start > dataset_end or user_end < dataset_start:
+            plan["_out_of_range"] = True
+            plan["_dataset_range"] = f"{dataset_start.strftime('%Y-%m-%d')} to {dataset_end.strftime('%Y-%m-%d')}"
+
+        clamped_start = max(user_start, dataset_start)
+        clamped_end = min(user_end, dataset_end)
+
+        plan["time"]["start"] = clamped_start.isoformat()
+        plan["time"]["end"] = clamped_end.isoformat()
+
+        return plan
 
 
 class ScientificQueryPlannerService:
-    """Notebook-derived intent router, entity extractor, and bounding box planner."""
+    """Backward-compatible alias — delegates to QueryPlannerService."""
 
-    REGIONS = {
-        "equatorial indian ocean": {"name": "Equatorial Indian Ocean", "bbox": {"lat_min": -10.0, "lat_max": 10.0, "lon_min": 50.0, "lon_max": 100.0}},
-        "bay of bengal": {"name": "Bay of Bengal", "bbox": {"lat_min": 5.0, "lat_max": 22.0, "lon_min": 80.0, "lon_max": 95.0}},
-        "arabian sea": {"name": "Arabian Sea", "bbox": {"lat_min": 5.0, "lat_max": 25.0, "lon_min": 50.0, "lon_max": 77.0}},
-        "southern ocean": {"name": "Southern Ocean", "bbox": {"lat_min": -70.0, "lat_max": -40.0, "lon_min": 20.0, "lon_max": 120.0}},
-        "indian ocean": {"name": "Indian Ocean", "bbox": {"lat_min": -40.0, "lat_max": 30.0, "lon_min": 20.0, "lon_max": 120.0}},
-    }
-
-    VARIABLES_MAP = {
-        "temperature": "TEMP", "temp": "TEMP", "heat": "TEMP", "sst": "TEMP", "thermal": "TEMP",
-        "salinity": "PSAL", "psal": "PSAL", "halocline": "PSAL",
-        "pressure": "PRES", "pres": "PRES",
-        "oxygen": "DOXY", "doxy": "DOXY",
-        "chlorophyll": "CHLA", "chla": "CHLA",
-        "nitrate": "NITRATE"
+    INTENT_MAP = {
+        "TEMPERATURE": "Temperature query",
+        "SALINITY": "Salinity query",
+        "COMPARISON": "Comparison",
+        "FLOAT_LIST": "Float search",
+        "TS_DIAGRAM": "Temperature query",
+        "DEPTH_PROFILE": "Temperature query",
+        "SPATIAL_MAP": "Spatial query",
+        "TRAJECTORY": "Float search",
+        "ANOMALY": "Temperature query",
+        "GREETING": "Greeting",
+        "GENERAL": "Scientific explanation",
     }
 
     @classmethod
     def parse_query(cls, prompt: str) -> Dict[str, Any]:
-        p_lower = prompt.lower().strip()
+        """Parse query and return in the old format expected by IntentRouter/MockProvider."""
+        plan = QueryPlannerService.parse(prompt)
+        old_intent = cls.INTENT_MAP.get(plan["intent"], "Temperature query")
 
-        # 1. Greeting Check
-        if re.search(r'^\s*(hi|hello|hey|greetings|who are you|good morning|good afternoon)\b', p_lower):
-            return {
-                "raw": prompt,
-                "intent": "Greeting",
-                "query_type": "GREETING",
-                "variables": [],
-                "region": None,
-                "depth_filter": None,
-                "time": None,
-                "wmo_id": None
-            }
-
-        # 2. Float Search Check
-        wmo_match = re.search(r'(?:float|platform|wmo)\s*#?\s*(\d{5,7})', p_lower)
-        if wmo_match or "list active argo floats" in p_lower or "track float" in p_lower or "active floats" in p_lower:
-            wmo_id = int(wmo_match.group(1)) if wmo_match else 2901234
-            matched_region = cls._extract_region(p_lower)
-            return {
-                "raw": prompt,
-                "intent": "Float search",
-                "query_type": "FLOAT_SEARCH",
-                "variables": ["TEMP", "PSAL"],
-                "region": matched_region or cls.REGIONS["indian ocean"],
-                "depth_filter": None,
-                "time": None,
-                "wmo_id": wmo_id
-            }
-
-        # 3. Comparison Check
-        if re.search(r'\b(compare|versus|vs|comparison|trend|delta|difference)\b', p_lower) or re.search(r'2022\s*(?:vs|and|to|versus)\s*2024', p_lower) or re.search(r'2022\s*(?:vs|and|to|versus)\s*2023', p_lower):
-            matched_region = cls._extract_region(p_lower)
-            years = [int(y) for y in re.findall(r'\b(2022|2023|2024)\b', p_lower)]
-            if not years:
-                years = [2022, 2024]
-            return {
-                "raw": prompt,
-                "intent": "Comparison",
-                "query_type": "COMPARISON",
-                "variables": cls._extract_variables(p_lower),
-                "region": matched_region or cls.REGIONS["indian ocean"],
-                "depth_filter": cls._extract_depth(p_lower),
-                "years": sorted(list(set(years)))
-            }
-
-        # 4. Dataset / Coverage Check
-        if re.search(r'\b(dataset|coverage|catalog|files|metadata|bounds)\b', p_lower):
-            matched_region = cls._extract_region(p_lower)
-            return {
-                "raw": prompt,
-                "intent": "Dataset query",
-                "query_type": "DATASET",
-                "variables": cls._extract_variables(p_lower),
-                "region": matched_region or cls.REGIONS["bay of bengal"],
-                "depth_filter": None,
-                "time": None
-            }
-
-        # 5. Salinity / Halocline Check
-        if "salinity" in p_lower or "psal" in p_lower or "halocline" in p_lower or "t-s" in p_lower or "water mass" in p_lower:
-            matched_region = cls._extract_region(p_lower)
-            return {
-                "raw": prompt,
-                "intent": "Salinity query",
-                "query_type": "SALINITY",
-                "variables": ["PSAL", "TEMP"],
-                "region": matched_region or cls.REGIONS["bay of bengal"],
-                "depth_filter": cls._extract_depth(p_lower),
-                "time": cls._extract_time(p_lower)
-            }
-
-        # 6. Temperature / Spatial Query
-        matched_region = cls._extract_region(p_lower)
+        # Map new plan keys to old format keys
         return {
-            "raw": prompt,
-            "intent": "Temperature query" if "temp" in p_lower or "thermocline" in p_lower else "Spatial query",
-            "query_type": "TEMPERATURE",
-            "variables": cls._extract_variables(p_lower),
-            "region": matched_region or cls.REGIONS["bay of bengal"],
-            "depth_filter": cls._extract_depth(p_lower),
-            "time": cls._extract_time(p_lower)
+            "raw": plan["raw"],
+            "intent": old_intent,
+            "query_type": plan["intent"],
+            "variables": plan["variables"],
+            "depth_filter": plan["depth_filter"],
+            "region": plan["region"],
+            "time": plan["time"],
+            "years": plan.get("years"),
+            "wmo_id": None,
+            "_out_of_range": plan.get("_out_of_range", False),
+            "_dataset_range": plan.get("_dataset_range"),
         }
-
-    @classmethod
-    def _extract_region(cls, p_lower: str) -> Optional[Dict[str, Any]]:
-        # Sort by key length descending so 'equatorial indian ocean' matches before 'indian ocean'
-        for r_key in sorted(cls.REGIONS.keys(), key=len, reverse=True):
-            if r_key in p_lower:
-                return cls.REGIONS[r_key]
-        return None
-
-    @classmethod
-    def _extract_variables(cls, p_lower: str) -> List[str]:
-        vars_found = set()
-        for k, v in cls.VARIABLES_MAP.items():
-            if k in p_lower:
-                vars_found.add(v)
-        return list(vars_found) if vars_found else ["TEMP", "PSAL"]
-
-    @classmethod
-    def _extract_depth(cls, p_lower: str) -> Optional[Dict[str, Any]]:
-        depth_point_match = re.search(r'(?:at|near|depth)\s*~?\s*(\d+)\s*m', p_lower)
-        depth_range_match = re.search(r'(\d+)\s*-\s*(\d+)\s*m', p_lower)
-
-        if depth_point_match:
-            d_val = float(depth_point_match.group(1))
-            return {"type": "point", "m": d_val, "tol": 10.0}
-        elif depth_range_match:
-            d_min = float(depth_range_match.group(1))
-            d_max = float(depth_range_match.group(2))
-            return {"type": "range", "min_m": d_min, "max_m": d_max}
-        return None
-
-    @classmethod
-    def _extract_time(cls, p_lower: str) -> Dict[str, str]:
-        now = datetime(2024, 12, 31)
-        start_date = datetime(2023, 1, 1)
-        end_date = now
-
-        year_match = re.search(r'\b(2022|2023|2024)\b', p_lower)
-        if year_match:
-            yr = int(year_match.group(1))
-            start_date = datetime(yr, 1, 1)
-            end_date = datetime(yr, 12, 31)
-
-        last_months_match = re.search(r'last\s*(\d+)\s*months', p_lower)
-        if last_months_match:
-            n_months = int(last_months_match.group(1))
-            start_date = now - timedelta(days=n_months * 30)
-
-        return {"start": start_date.isoformat(), "end": end_date.isoformat()}

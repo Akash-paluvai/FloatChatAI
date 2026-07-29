@@ -21,37 +21,17 @@ class ChatRequest(BaseModel):
         return self.prompt or self.message or "Show temperature near Bay of Bengal"
 
 
-class AnalyticalSummary(BaseModel):
-    avg_temp: Optional[str] = Field(default="28.3°C (Surface)")
-    max_depth: Optional[str] = Field(default="2,000 meters")
-    salinity_range: Optional[str] = Field(default="33.2 – 35.0 PSU")
-    thermocline_gradient_depth: Optional[str] = Field(default="75m – 200m")
-    spatial_centroid: Optional[str] = Field(default="15.5°N, 88.2°E")
-    total_observations: Optional[int] = Field(default=50)
-    anomaly_detected: bool = Field(default=False)
-
-
 class ChatResponse(BaseModel):
     session_id: str = Field(default="session_default")
     message_id: str = Field(default="msg_ai_101")
-    status: str = Field(default="PROCESSED_BY_AI_ORCHESTRATOR", description="Processing status label")
-    response_text: str = Field(
-        default="[FloatChat AI] Retrieved ARGO depth profiles."
-    )
+    status: str = Field(default="PROCESSED", description="Processing status label")
+    response_text: str = Field(default="")
     content: Optional[str] = Field(default=None)
-    generated_sql: Optional[str] = Field(
-        default="SELECT depth_m, temp_celsius FROM argo_profiles WHERE ocean_region = 'Bay of Bengal' LIMIT 500;"
-    )
+    generated_sql: Optional[str] = Field(default=None)
     citations: List[Dict[str, Any]] = Field(default_factory=list)
-    confidence_score: float = Field(default=0.94)
-    sources: List[str] = Field(default_factory=lambda: ["ARGO GDAC", "Phase 5 Semantic Retrieval", "PostgreSQL/PostGIS"])
+    confidence_score: float = Field(default=0.0)
+    sources: List[str] = Field(default_factory=list)
     analytical_summary: Optional[Dict[str, Any]] = Field(default_factory=dict)
-    viz_spec: Optional[Dict[str, Any]] = Field(default=None)
+    viz_spec: Optional[Any] = Field(default=None, description="List of Plotly chart specs or single spec")
     artifacts: Optional[Dict[str, Any]] = Field(default=None)
-    suggested_followups: List[str] = Field(
-        default_factory=lambda: [
-            "Compare profile with 2022 historic baseline",
-            "Download GeoJSON dataset for these floats",
-            "Analyze thermocline gradient depth between 100m–300m"
-        ]
-    )
+    suggested_followups: List[str] = Field(default_factory=list)

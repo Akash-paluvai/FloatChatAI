@@ -1,15 +1,16 @@
-"""Ocean Analytics Engine refactored directly from reference notebooks (s3rag, step22, s222)."""
-from typing import Dict, Any, List
+"""Ocean Analytics Engine — computes REAL statistics from loaded dataframes.
+Direct port of notebook summarize_by_depth(), generate_natural_language_insights()."""
+from typing import Dict, Any, List, Optional
 import pandas as pd
 import numpy as np
 
 
 class OceanAnalyticsEngine:
-    """Notebook-derived depth binning, thermocline detection, multi-year comparison, and salinity analytics."""
+    """Computes real statistics from real data — no hardcoded numbers."""
 
     @staticmethod
     def summarize_by_depth(df: pd.DataFrame, var_list: List[str] = None, depth_col: str = "DEPTH_M") -> pd.DataFrame:
-        """Bins depth into standard oceanographic intervals matching notebook step22."""
+        """Port of notebook summarize_by_depth() — bins depth into oceanographic intervals."""
         if df.empty or depth_col not in df.columns:
             return pd.DataFrame()
 
@@ -18,81 +19,134 @@ class OceanAnalyticsEngine:
         labels = ["0-10m", "10-50m", "50-100m", "100-200m", "200-500m", "500-1000m", "1000-2000m"]
 
         df_copy = df.copy()
-        df_copy["DEPTH_BIN"] = pd.cut(df_copy[depth_col], bins=bins, labels=labels, right=False)
+        df_copy["DEPTH_BIN"] = pd.cut(df_copy[depth_col].astype(float), bins=bins, labels=labels, right=False)
 
         valid_vars = [v for v in var_list if v in df_copy.columns]
+        if not valid_vars:
+            return pd.DataFrame()
         summary = df_copy.groupby("DEPTH_BIN", observed=False)[valid_vars].agg(["mean", "std", "min", "max", "count"]).reset_index()
         return summary
 
     @staticmethod
-    def compute_thermocline_and_stats(df: pd.DataFrame, region_name: str = "Bay of Bengal") -> Dict[str, Any]:
-        """Calculates thermocline drop depth (>10°C drop below surface) and spatial centroids matching notebook s3rag."""
+    def compute_thermocline_and_stats(df: pd.DataFrame, region_name: str = "") -> Dict[str, Any]:
+        """Computes REAL thermocline statistics from actual data — no hardcoded numbers."""
         if df.empty:
-            return {"summary": "No observations available."}
+            return {"summary": "No observations matched the query filters.", "total_observations": 0}
 
-        avg_temp = float(df["TEMP"].mean()) if "TEMP" in df.columns else 28.3
-        salinity_min = float(df["PSAL"].min()) if "PSAL" in df.columns else 33.2
-        salinity_max = float(df["PSAL"].max()) if "PSAL" in df.columns else 35.0
+        stats: Dict[str, Any] = {"region_name": region_name, "total_observations": len(df)}
 
-        lat_center = float(df["LATITUDE"].mean()) if "LATITUDE" in df.columns else 15.5
-        lon_center = float(df["LONGITUDE"].mean()) if "LONGITUDE" in df.columns else 88.2
+        if "TEMP" in df.columns:
+            temp_series = df["TEMP"].dropna()
+            if not temp_series.empty:
+                stats["avg_temp"] = f"{float(temp_series.mean()):.2f}°C"
+                stats["min_temp"] = f"{float(temp_series.min()):.2f}°C"
+                stats["max_temp"] = f"{float(temp_series.max()):.2f}°C"
+                stats["std_temp"] = f"{float(temp_series.std()):.2f}°C"
 
-        # Detect thermocline depth range
-        if "TEMP" in df.columns and "DEPTH_M" in df.columns:
-            surface_t = df.loc[df["DEPTH_M"] <= 20, "TEMP"].mean()
-            deep_t_mask = (surface_t - df["TEMP"]) >= 10.0
-            if deep_t_mask.any():
-                therm_depth_val = df.loc[deep_t_mask, "DEPTH_M"].min()
-                thermocline_depth = f"{int(therm_depth_val - 20)}m – {int(therm_depth_val + 100)}m"
-            else:
-                thermocline_depth = "75m – 250m"
-        else:
-            thermocline_depth = "100m – 300m"
+        if "PSAL" in df.columns:
+            psal_series = df["PSAL"].dropna()
+            # Filter out obvious bad values (QC)
+            psal_series = psal_series[(psal_series > 2) & (psal_series < 42)]
+            if not psal_series.empty:
+                stats["salinity_range"] = f"{float(psal_series.min()):.2f} – {float(psal_series.max()):.2f} PSU"
+                stats["avg_salinity"] = f"{float(psal_series.mean()):.2f} PSU"
 
-        return {
-            "avg_surface_temp": f"{avg_temp:.1f}°C",
-            "salinity_range": f"{salinity_min:.1f} – {salinity_max:.1f} PSU",
-            "thermocline_gradient_depth": thermocline_depth,
-            "spatial_centroid": f"{lat_center:.1f}°N, {lon_center:.1f}°E",
-            "total_observations": len(df),
-            "region_name": region_name
-        }
+        if "LATITUDE" in df.columns and "LONGITUDE" in df.columns:
+            stats["spatial_centroid"] = f"{float(df['LATITUDE'].mean()):.2f}°N, {float(df['LONGITUDE'].mean()):.2f}°E"
+            stats["lat_range"] = f"{float(df['LATITUDE'].min()):.2f}° – {float(df['LATITUDE'].max()):.2f}°"
+            stats["lon_range"] = f"{float(df['LONGITUDE'].min()):.2f}° – {float(df['LONGITUDE'].max()):.2f}°"
+
+        if "DEPTH_M" in df.columns:
+            stats["depth_range"] = f"{float(df['DEPTH_M'].min()):.1f}m – {float(df['DEPTH_M'].max()):.1f}m"
+
+        if "JULD" in df.columns:
+            juld = pd.to_datetime(df["JULD"], errors="coerce").dropna()
+            if not juld.empty:
+                stats["time_range"] = f"{juld.min().strftime('%Y-%m-%d')} to {juld.max().strftime('%Y-%m-%d')}"
+
+        # Thermocline detection from real data
+        if "TEMP" in df.columns and "DEPTH_M" in df.columns and len(df) > 5:
+            shallow = df[df["DEPTH_M"] <= 20]["TEMP"].mean()
+            if not pd.isna(shallow):
+                deep_mask = (shallow - df["TEMP"]) >= 10.0
+                if deep_mask.any():
+                    therm_depth = float(df.loc[deep_mask, "DEPTH_M"].min())
+                    stats["thermocline_gradient_depth"] = f"{int(max(0, therm_depth - 30))}m – {int(therm_depth + 50)}m"
+                else:
+                    stats["thermocline_gradient_depth"] = "Not detected in this depth range"
+
+        # Unique source files = proxy for unique floats
+        if "source_file" in df.columns:
+            unique_files = df["source_file"].nunique()
+            stats["unique_profiles"] = unique_files
+            stats["cited_source_files"] = list(df["source_file"].unique()[:10])
+
+        return stats
 
     @staticmethod
     def compute_multi_year_comparison(df_dict: Dict[int, pd.DataFrame], variable: str = "TEMP") -> Dict[str, Any]:
-        """Computes year-over-year mean profile comparison and heat deltas matching notebook step22."""
+        """Computes REAL year-over-year statistics from actual data."""
         years = sorted(list(df_dict.keys()))
         summaries = {}
         for yr in years:
             df = df_dict[yr]
-            avg_val = float(df[variable].mean()) if variable in df.columns else 28.0
+            if df.empty or variable not in df.columns:
+                summaries[yr] = {"mean_val": None, "obs_count": 0, "note": "No data for this year"}
+                continue
+            vals = df[variable].dropna()
+            if variable == "PSAL":
+                vals = vals[(vals > 2) & (vals < 42)]
             summaries[yr] = {
-                "mean_val": round(avg_val, 2),
-                "obs_count": len(df)
+                "mean_val": round(float(vals.mean()), 3) if not vals.empty else None,
+                "std_val": round(float(vals.std()), 3) if not vals.empty else None,
+                "min_val": round(float(vals.min()), 3) if not vals.empty else None,
+                "max_val": round(float(vals.max()), 3) if not vals.empty else None,
+                "obs_count": len(vals)
             }
 
-        delta = round(summaries[years[-1]]["mean_val"] - summaries[years[0]]["mean_val"], 2) if len(years) > 1 else 0.0
+        # Compute real delta
+        first_yr, last_yr = years[0], years[-1]
+        m1 = summaries[first_yr].get("mean_val")
+        m2 = summaries[last_yr].get("mean_val")
+        if m1 is not None and m2 is not None:
+            delta = round(m2 - m1, 3)
+            trend = "Warming" if delta > 0 else "Cooling" if delta < 0 else "Stable"
+        else:
+            delta = None
+            trend = "Insufficient data"
+
         return {
             "years_compared": years,
+            "variable": variable,
             "yearly_summaries": summaries,
-            "overall_delta": f"{'+' if delta > 0 else ''}{delta}°C",
-            "trend_direction": "Warming" if delta > 0 else "Cooling" if delta < 0 else "Stable"
+            "overall_delta": f"{'+' if delta and delta > 0 else ''}{delta}°C" if delta is not None else "N/A",
+            "trend_direction": trend
         }
 
     @staticmethod
-    def compute_salinity_analytics(df: pd.DataFrame, region_name: str = "Arabian Sea") -> Dict[str, Any]:
-        """Calculates halocline depth and freshwater runoff vs evaporation salinity fronts."""
+    def compute_salinity_analytics(df: pd.DataFrame, region_name: str = "") -> Dict[str, Any]:
+        """Computes REAL salinity analytics from actual data."""
         if df.empty or "PSAL" not in df.columns:
-            return {"summary": "No salinity data."}
+            return {"summary": "No salinity data found for this query."}
 
-        mean_psal = float(df["PSAL"].mean())
-        min_psal = float(df["PSAL"].min())
-        max_psal = float(df["PSAL"].max())
+        psal = df["PSAL"].dropna()
+        psal = psal[(psal > 2) & (psal < 42)]  # QC filter
+        if psal.empty:
+            return {"summary": "No valid salinity observations after QC filtering."}
 
-        halocline_type = "Evaporation-Dominated High Salinity Front" if mean_psal > 35.0 else "River Runoff Freshened Layer"
-        return {
-            "mean_salinity": f"{mean_psal:.2f} PSU",
-            "salinity_range": f"{min_psal:.2f} – {max_psal:.2f} PSU",
-            "regime": halocline_type,
-            "halocline_depth": "30m – 120m"
+        mean_psal = float(psal.mean())
+        result = {
+            "region_name": region_name,
+            "mean_salinity": f"{mean_psal:.3f} PSU",
+            "salinity_range": f"{float(psal.min()):.3f} – {float(psal.max()):.3f} PSU",
+            "std_salinity": f"{float(psal.std()):.3f} PSU",
+            "total_observations": len(psal),
+            "regime": "High Salinity (Evaporation-Dominated)" if mean_psal > 35.0 else "Low Salinity (Freshwater-Influenced)"
         }
+
+        if "TEMP" in df.columns:
+            temp = df["TEMP"].dropna()
+            result["mean_temp"] = f"{float(temp.mean()):.2f}°C"
+            result["ts_correlation"] = f"{float(df[['TEMP','PSAL']].dropna().corr().iloc[0,1]):.3f}" if len(df.dropna(subset=["TEMP","PSAL"])) > 5 else "N/A"
+
+        return result

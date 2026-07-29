@@ -1,24 +1,37 @@
-import { ChatMessage, PresetQuery } from '../types/chat';
+import { ChatMessage, PresetQuery, PlotlyChartSpec, AnalyticsSummary } from '../types/chat';
 import { ServiceResponse } from '../types/service';
-import { MOCK_CHAT_HISTORY, MOCK_PRESET_QUERIES } from '../mock/chat';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
 
+const DEFAULT_PRESETS: PresetQuery[] = [
+  { id: 'p1', query: 'Show temperature near Bay of Bengal', category: 'Temperature', icon: '🌡️' },
+  { id: 'p2', query: 'Find salinity in Arabian Sea in 2023', category: 'Salinity', icon: '🧂' },
+  { id: 'p3', query: 'Compare 2022 vs 2024 temperatures in Indian Ocean', category: 'Climate Change', icon: '📊' },
+  { id: 'p4', query: 'Show temperature at 500m depth in Bay of Bengal', category: 'Temperature', icon: '🌊' },
+  { id: 'p5', query: 'Map temperature across Indian Ocean', category: 'Temperature', icon: '🗺️' },
+  { id: 'p6', query: 'Show T-S diagram for Arabian Sea', category: 'Salinity', icon: '📈' },
+];
+
 export class ChatService {
   /**
-   * Fetch chat history
+   * Fetch chat history — start with an initial greeting
    */
   static async getHistory(): Promise<ServiceResponse<ChatMessage[]>> {
     return {
-      data: MOCK_CHAT_HISTORY,
+      data: [{
+        id: 'welcome',
+        role: 'assistant',
+        content: "Hello! I'm **FloatChat**, your AI-powered oceanographic data explorer. I analyze **real ARGO float observations** across the Indian Ocean. Try asking about temperature profiles, salinity patterns, or multi-year comparisons!",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }],
       success: true,
-      isMockData: true,
+      isMockData: false,
       timestamp: new Date().toISOString(),
     };
   }
 
   /**
-   * Send user prompt to live FastAPI backend (Phase 6 & 7 AI Multi-Agent Engine)
+   * Send user prompt to live FastAPI backend — receives real data charts & analytics
    */
   static async sendMessage(userPrompt: string): Promise<ServiceResponse<ChatMessage>> {
     try {
@@ -32,26 +45,28 @@ export class ChatService {
         const json = await res.json();
         const apiData = json.data;
 
-        // Structured artifacts directly from backend notebook execution
-        const vizSpec = apiData.viz_spec || apiData.artifacts?.visualization;
-        const analytics = apiData.analytical_summary || apiData.artifacts?.statistics || MOCK_CHAT_HISTORY[1].analyticalSummary;
+        // Parse viz_spec — backend returns an array of chart specs
+        const vizSpecs: PlotlyChartSpec[] = Array.isArray(apiData.viz_spec)
+          ? apiData.viz_spec
+          : apiData.viz_spec ? [apiData.viz_spec] : [];
+
+        // Parse analytics
+        const analytics: AnalyticsSummary = apiData.analytical_summary || {};
+
+        // Parse data table from artifacts
+        const dataTable = apiData.artifacts?.data_table || apiData.tool_results?.notebook_dataframe_sample;
 
         const assistantMsg: ChatMessage = {
           id: apiData.message_id || `msg-${Date.now()}`,
           role: 'assistant',
-          content: apiData.content || apiData.response_text || `Analysis completed for prompt: "${userPrompt}".`,
+          content: apiData.content || apiData.response_text || `Analysis completed for: "${userPrompt}".`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           isDemoPreview: false,
-          sqlQuery: apiData.generated_sql || apiData.sql_query_preview,
-          chartData: vizSpec ? { type: vizSpec.type, config: vizSpec.config } : MOCK_CHAT_HISTORY[1].chartData,
-          mapPoints: MOCK_CHAT_HISTORY[1].mapPoints,
-          analyticalSummary: analytics,
-          artifacts: apiData.artifacts,
-          suggestedFollowups: apiData.suggested_followups || [
-            'Compare profile with 2022 historic baseline',
-            'Download GeoJSON dataset for these floats',
-            'Analyze thermocline gradient depth between 100m–300m'
-          ],
+          sqlQuery: apiData.generated_sql,
+          charts: vizSpecs,
+          analytics: analytics,
+          dataTable: dataTable,
+          suggestedFollowups: apiData.suggested_followups || [],
         };
 
         return {
@@ -62,30 +77,18 @@ export class ChatService {
         };
       }
     } catch (error) {
-      console.warn('FastAPI backend connection fallback to mock:', error);
+      console.warn('Backend connection failed:', error);
     }
 
-    // Fallback to mock if API unreachable
-    const assistantMsg: ChatMessage = {
-      id: `msg-${Date.now()}`,
-      role: 'assistant',
-      content: `[FloatChat AI Engine] Analysis completed for prompt: "${userPrompt}". FloatChat AI retrieved 1,000 ARGO depth profiles from PostgreSQL/Parquet storage.`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isDemoPreview: true,
-      sqlQuery: `SELECT depth_m, temp_celsius, salinity_psu, latitude, longitude\nFROM argo_profiles\nWHERE search_vector @@ plainto_tsquery('${userPrompt.replace(/'/g, "''")}')\nLIMIT 1000;`,
-      chartData: MOCK_CHAT_HISTORY[1].chartData,
-      mapPoints: MOCK_CHAT_HISTORY[1].mapPoints,
-      analyticalSummary: MOCK_CHAT_HISTORY[1].analyticalSummary,
-      suggestedFollowups: [
-        'Filter observations by thermocline boundary',
-        'Export CSV dataset for statistical validation',
-        'Inspect raw netCDF telemetry metadata',
-      ],
-    };
-
+    // Fallback
     return {
-      data: assistantMsg,
-      success: true,
+      data: {
+        id: `msg-${Date.now()}`,
+        role: 'assistant',
+        content: `Could not reach the FloatChat backend. Please ensure the server is running on port 8000.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
+      success: false,
       isMockData: true,
       timestamp: new Date().toISOString(),
     };
@@ -96,9 +99,9 @@ export class ChatService {
    */
   static async getPresetQueries(): Promise<ServiceResponse<PresetQuery[]>> {
     return {
-      data: MOCK_PRESET_QUERIES,
+      data: DEFAULT_PRESETS,
       success: true,
-      isMockData: true,
+      isMockData: false,
       timestamp: new Date().toISOString(),
     };
   }
