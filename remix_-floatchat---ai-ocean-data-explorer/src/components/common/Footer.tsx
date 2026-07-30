@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Waves, Github, Globe, ExternalLink, Activity, Database, FileSpreadsheet, ShieldCheck, Terminal } from 'lucide-react';
+import { Waves, GitBranch, Globe, ExternalLink, Activity, Database, FileSpreadsheet, ShieldCheck, Terminal } from 'lucide-react';
 import { APP_CONFIG } from '../../config/app';
 import { FOOTER_LINKS } from '../../constants/navigation';
 import { ROUTES } from '../../constants/routes';
@@ -73,7 +73,7 @@ export const Footer: React.FC = () => {
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#06283D] border border-[#5EE6FF]/20 text-xs text-white hover:text-[#5EE6FF] hover:border-[#00B4FF] transition-all w-fit"
               >
-                <Github className="w-4 h-4 text-[#00B4FF]" />
+                <GitBranch className="w-4 h-4 text-[#00B4FF]" />
                 <span className="font-mono text-[11px]">GitHub Repository</span>
                 <ExternalLink className="w-3 h-3 opacity-60" />
               </a>
