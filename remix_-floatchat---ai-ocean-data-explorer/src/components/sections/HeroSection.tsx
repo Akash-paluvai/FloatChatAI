@@ -35,11 +35,11 @@ export const HeroSection: React.FC = () => {
             {/* Live Operational Status Pills */}
             <div className="flex flex-wrap items-center gap-3">
               <Badge variant="highlight" glowing icon={<Radio className="w-3.5 h-3.5 animate-pulse text-[#5EE6FF]" />}>
-                Multi-Agent AI Engine Active
+                PyArrow Parquet Pipeline Active
               </Badge>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#06283D]/90 border border-[#5EE6FF]/30 text-xs font-mono text-[#5EE6FF]">
                 <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-ping" />
-                3,840 ARGO Floats Live
+                54M+ ARGO Observations Live
               </span>
             </div>
 
@@ -50,7 +50,7 @@ export const HeroSection: React.FC = () => {
             </h1>
 
             <p className="text-lg sm:text-xl text-[#A8C7D8] font-normal leading-relaxed max-w-2xl">
-              Explore ARGO oceanographic data through natural language conversations. Query temperature depth profiles, thermocline boundaries, and salinity anomalies with 100% grounded citations.
+              Explore real ARGO oceanographic data through natural language conversations. Query temperature depth profiles, thermocline boundaries, and salinity anomalies with 100% data-grounded synthesis.
             </p>
 
             {/* Interactive Natural Language Search Input */}
@@ -62,10 +62,10 @@ export const HeroSection: React.FC = () => {
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="text-[#A8C7D8]/70 font-mono text-[11px]">Popular Queries:</span>
               {[
-                "🌡️ Surface Temp in Bay of Bengal",
-                "🌊 3D Hydrographic Section",
-                "📊 Salinity Anomalies 2024",
-                "📍 Track Float #2901234"
+                "🌡️ Temperature near Bay of Bengal",
+                "📊 Salinity in Arabian Sea in 2023",
+                "📈 Compare 2022 vs 2024 temperatures",
+                "📉 Show thermocline depth"
               ].map((prompt, idx) => (
                 <button
                   key={idx}
@@ -86,7 +86,7 @@ export const HeroSection: React.FC = () => {
                   leftIcon={<Sparkles className="w-5 h-5" />}
                   rightIcon={<ArrowRight className="w-5 h-5" />}
                 >
-                  Launch AI Copilot
+                  Launch AI Explorer
                 </Button>
               </Link>
               <Link to={ROUTES.DASHBOARD}>
@@ -95,7 +95,7 @@ export const HeroSection: React.FC = () => {
                   size="lg"
                   leftIcon={<LineChart className="w-5 h-5" />}
                 >
-                  3D Visualizer
+                  Analytics Dashboard
                 </Button>
               </Link>
             </div>
@@ -103,16 +103,16 @@ export const HeroSection: React.FC = () => {
             {/* Micro Metrics Banner */}
             <div className="grid grid-cols-3 gap-6 pt-6 border-t border-[#5EE6FF]/15 max-w-xl">
               <div className="glass-panel p-3 rounded-2xl border border-white/10">
-                <span className="text-2xl font-bold font-heading text-white">3,840+</span>
-                <p className="text-xs text-[#A8C7D8] font-mono">ARGO Floats</p>
+                <span className="text-2xl font-bold font-heading text-white">54M+</span>
+                <p className="text-xs text-[#A8C7D8] font-mono">Observations</p>
               </div>
               <div className="glass-panel p-3 rounded-2xl border border-white/10">
-                <span className="text-2xl font-bold font-heading text-[#5EE6FF]">2.4M+</span>
-                <p className="text-xs text-[#A8C7D8] font-mono">Parsed Profiles</p>
+                <span className="text-2xl font-bold font-heading text-[#5EE6FF]">36</span>
+                <p className="text-xs text-[#A8C7D8] font-mono">Parquet Datasets</p>
               </div>
               <div className="glass-panel p-3 rounded-2xl border border-white/10">
-                <span className="text-2xl font-bold font-heading text-[#00B4FF]">95.7%</span>
-                <p className="text-xs text-[#A8C7D8] font-mono">AI Groundedness</p>
+                <span className="text-2xl font-bold font-heading text-[#00B4FF]">100%</span>
+                <p className="text-xs text-[#A8C7D8] font-mono">Data Grounded</p>
               </div>
             </div>
 
