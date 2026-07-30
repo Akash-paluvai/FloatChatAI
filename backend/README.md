@@ -1,8 +1,23 @@
 # FloatChat Backend API 🌊
 
-FloatChat is an AI-powered oceanographic platform for querying ARGO oceanographic data using natural language.
+FloatChat Backend is a FastAPI-powered scientific REST API designed to process, analyze, and visualize real ARGO float oceanographic observations (~54 Million data points across 36 monthly Parquet datasets).
 
-> **Phase 2 Complete**: Production-grade FastAPI backend platform architecture with domain-driven design, Pydantic v2 schemas, provider abstractions, SQLAlchemy 2.x async session setup, Alembic migrations config, Loguru logging, correlation IDs, standardized envelope responses, Pytest test suite, and Docker containerization.
+---
+
+## 🔑 Required & Supported Environment Keys
+
+FloatChat can run in a self-contained offline mode using internal data-driven scientific synthesis, or connect to external LLM APIs, vector stores, and relational databases.
+
+| Key | Type | Description |
+| :--- | :--- | :--- |
+| `OPENAI_API_KEY` | Optional | OpenAI API Key for LiteLLM completion (`gpt-4o-mini`, `gpt-4o`). |
+| `ANTHROPIC_API_KEY` | Optional | Anthropic API Key for Claude models (`claude-3-5-sonnet`). |
+| `GEMINI_API_KEY` | Optional | Google Gemini API Key (`gemini-2.5-flash`). |
+| `DATABASE_URL` | Optional | PostgreSQL/PostGIS connection string. |
+| `REDIS_URL` | Optional | Redis caching connection string. |
+| `VECTOR_DB_URL` | Optional | ChromaDB vector database endpoint. |
+| `PARQUET_DATA_DIR` | Config | Path to ARGO Parquet directory (default: `../SIH2025/Data/argo_prototype_parquet`). |
+| `METADATA_CSV_PATH` | Config | Path to Metadata CSV Catalog (default: `../SIH2025/Data/argo_metadata_catalog.csv`). |
 
 ---
 
@@ -11,67 +26,42 @@ FloatChat is an AI-powered oceanographic platform for querying ARGO oceanographi
 ```
 backend/
 ├── app/
-│   ├── api/             # Domain-grouped API gateways (chat, datasets, analytics, visualization, exports, system)
-│   ├── config/          # Pydantic BaseSettings & Environment configuration
+│   ├── api/             # Domain API Gateways (chat, dashboard, analytics, visualization, exports, system)
+│   ├── ai/              # Execution Engine & Data-Driven LLM Synthesizer
+│   ├── config/          # Pydantic Settings & Environment loader
 │   ├── core/            # Loguru logging, exception handling, constants
-│   ├── database/        # SQLAlchemy 2.x async engine, sessionmaker, Alembic migrations
-│   ├── dependencies/    # FastAPI dependency injection (context, pagination, auth, cache)
-│   ├── domain/          # Entities (OceanProfile, Float, Dataset, Measurement), Value Objects, Domain Services
-│   ├── events/          # Async event bus pub/sub system
-│   ├── middleware/      # RequestID (Correlation ID), Timing, Structured Logging, Security Headers, GZip
-│   ├── providers/       # Infrastructure provider abstractions (DatabaseProvider, StorageProvider, VectorProvider, CacheProvider, FileProvider)
-│   ├── repositories/    # Abstract repositories (DatasetRepository, FloatRepository, ProfileRepository, etc.)
-│   ├── schemas/         # Pydantic v2 DTOs & standardized APIResponse[T] envelope
-│   ├── services/        # Application business services layer
-│   ├── utils/           # Enums, helpers, pagination validators
-│   ├── workers/         # Background task worker scheduler & jobs skeleton
+│   ├── middleware/      # RequestID, Timing, Structured Logging, Security Headers
+│   ├── schemas/         # Pydantic v2 DTOs & envelope responses
+│   ├── services/
+│   │   └── scientific/  # Data Pipeline, Query Planner, Analytics & Viz Engines
 │   └── main.py          # FastAPI application entry point
-├── tests/               # Pytest suite with AsyncClient fixtures
-├── Dockerfile           # Multi-stage security-hardened container
-├── docker-compose.yml   # Multi-container setup (Backend + PostgreSQL + Redis)
-├── pyproject.toml       # Code formatting config (Ruff, Black, isort, mypy)
-└── alembic.ini          # Alembic database migration configuration
+├── tests/               # Pytest suite
+└── Dockerfile           # Multi-stage Docker setup
 ```
 
 ---
 
 ## 🚀 Running Locally
 
-### 1. Create Environment & Install Dependencies
 ```bash
-python3 -m venv .venv
+# 1. Activate Virtual Environment
 source .venv/bin/activate
-pip install -r requirements.txt
-```
 
-### 2. Start FastAPI Dev Server
-```bash
+# 2. Install Dependencies
+pip install -r requirements.txt
+
+# 3. Start Server
 uvicorn app.main:app --reload --port 8000
 ```
-- Interactive OpenAPI Docs: [http://localhost:8000/api/v1/docs](http://localhost:8000/api/v1/docs)
-- ReDoc Docs: [http://localhost:8000/api/v1/redoc](http://localhost:8000/api/v1/redoc)
-- Health Check: [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
+
+- Swagger OpenAPI Documentation: [http://127.0.0.1:8000/api/v1/docs](http://127.0.0.1:8000/api/v1/docs)
+- Interactive Health Diagnostic: [http://127.0.0.1:8000/api/v1/health](http://127.0.0.1:8000/api/v1/health)
+- Dashboard Summary API: [http://127.0.0.1:8000/api/v1/dashboard/summary](http://127.0.0.1:8000/api/v1/dashboard/summary)
 
 ---
 
-## 🧪 Testing & Code Quality
+## 🧪 Testing
 
-Run tests:
 ```bash
 PYTHONPATH=. pytest -v
-```
-
-Format and lint:
-```bash
-black app tests
-isort app tests
-ruff check app tests
-```
-
----
-
-## 🐳 Docker Deployment
-
-```bash
-docker-compose up --build
 ```

@@ -23,6 +23,7 @@ from app.api.visualization.router import router as visualization_router
 from app.api.exports.router import router as exports_router
 from app.api.retrieval.router import router as retrieval_router
 from app.api.reports.router import agents_router, viz_router, report_router
+from app.api.dashboard.router import router as dashboard_router
 
 
 @asynccontextmanager
@@ -115,6 +116,7 @@ app.include_router(retrieval_router, prefix=API_V1_PREFIX)
 app.include_router(viz_router, prefix=API_V1_PREFIX)
 app.include_router(report_router, prefix=API_V1_PREFIX)
 app.include_router(exports_router, prefix=API_V1_PREFIX)
+app.include_router(dashboard_router, prefix=API_V1_PREFIX)
 
 
 @app.get("/", include_in_schema=False)

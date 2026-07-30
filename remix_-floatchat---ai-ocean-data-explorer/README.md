@@ -1,65 +1,47 @@
-# FloatChat — Talk to the Ocean 🌊
+# FloatChat AI Explorer — Frontend Client 🌊
 
-FloatChat is an AI-powered oceanographic platform enabling users to explore ARGO ocean data through natural language conversations.
-
-> **Phase 1 Complete**: Production-grade React 19 + TypeScript + Tailwind CSS + Framer Motion frontend architecture. Ready for Phase 2 backend (FastAPI, PostgreSQL, PostGIS, RAG, MCP) integration.
+The frontend interface for FloatChat AI is a modern React 19 web application for exploring real ARGO ocean observations through conversational AI, dynamic interactive Plotly charts, live metric cards, and a multi-tab ocean analytics dashboard.
 
 ---
 
-## 🎨 Tech Stack & Architecture
+## 🎨 Features & Capabilities
 
-- **Core**: React 19, TypeScript, Vite
-- **Styling**: Tailwind CSS (Dark Mode Only, Custom Glassmorphism, Deep Ocean Palette)
-- **Animations**: Framer Motion (Spring Physics, Particle Wave Canvas, Floating Cards)
-- **Routing**: React Router DOM v7
-- **Icons**: Lucide React Icons
+- **Interactive Plotly Visualizations**:
+  - Inverted depth profiles ($0\text{m} \to 2000\text{m}$) showing thermocline drop.
+  - Temperature & Salinity distribution histograms.
+  - T-S diagram scatter plots.
+  - Inter-annual multi-year overlay comparisons.
+- **Data-Driven Chat Explorer (`/demo`)**:
+  - Live query processing with streaming status.
+  - Real-time stat grid cards (observations, mean temp, thermocline zone, centroid coordinates).
+  - Rich Markdown text rendering with plain-language summary paragraphs.
+  - Dynamic follow-up suggestion chips.
+  - PostGIS SQL query preview.
+- **Ocean Analytics Dashboard (`/dashboard`)**:
+  - **Overview Tab**: Dataset size by month chart, spatial coverage bounds, region quick-navigation.
+  - **Datasets Tab**: Interactive catalog table listing 36 Parquet dataset files, file sizes, latitude/longitude bounds, and temporal ranges.
+  - **Region Explorer Tab**: Live statistics computed directly from Parquet files for Bay of Bengal, Arabian Sea, Southern Ocean, and Equatorial Indian Ocean.
 
 ---
 
-## 📁 Project Structure
+## 🔑 Environment Configuration
 
-```
-src/
-├── assets/             # Brand logos & static vectors
-├── config/             # App metadata & environment configuration
-├── constants/          # Theme tokens, routes, navigation & tech stack
-├── types/              # Domain TypeScript interfaces (ocean, chat, dashboard, service)
-├── mock/               # Isolated mock datasets for Phase 1
-├── services/           # Async service abstraction layer (ready for FastAPI)
-├── hooks/              # Custom React hooks
-├── components/
-│   ├── ui/             # Primitive Design System elements (Button, Card, Badge, Dialog, etc.)
-│   ├── common/         # Global shared components (Navbar, Footer, SEOHead, ErrorBoundary)
-│   └── sections/       # Landing page sections (Hero, Features, Timeline, Architecture, Roadmap)
-├── interactive/        # Visual effects & canvas animations
-├── layouts/            # Global page layout wrappers (MainLayout, DashboardLayout, DocumentationLayout)
-├── pages/              # Route views (LandingPage, DemoPage, DashboardPage, DocsPage, AboutPage, StatusPage, NotFoundPage)
-├── router/             # React Router DOM configuration
-└── styles/             # Tailwind CSS & global glassmorphism CSS
+Create a `.env` file in the frontend root directory if you need to point to a custom API URL:
+
+```ini
+VITE_API_BASE_URL=http://127.0.0.1:8000/api/v1
 ```
 
 ---
 
-## 🌐 Routes
-
-- `/` — Landing Page (Hero, Features, How It Works, Tech Stack, Architecture, Roadmap, CTA)
-- `/demo` — Interactive Mock AI Chat Interface (Sample prompt, depth profiles, buoy coordinates, SQL card)
-- `/dashboard` — Realistic Ocean Analytics Dashboard (Leaflet map, stat metrics, dataset browser, recent queries log)
-- `/docs` — Technical Documentation Portal (Architecture, Workflow, Tech Stack, API, Deployment, Research)
-- `/about` — Mission, Vision & Future Scope
-- `/status` — System Status & Engineering Roadmap Matrix
-- `/404` — Ocean Coordinates Not Found
-
----
-
-## 🚀 Running Locally
+## 🛠️ Running Locally
 
 ```bash
+# Install dependencies
 npm install
+
+# Start Vite development server
 npm run dev
 ```
 
-Build for production:
-```bash
-npm run build
-```
+The application will run at `http://localhost:5173`.
